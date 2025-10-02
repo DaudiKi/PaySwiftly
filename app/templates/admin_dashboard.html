@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoPay - Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+            <p class="text-gray-600">System Overview and Statistics</p>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <!-- Total Revenue -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900">Total Revenue</h3>
+                <p class="text-3xl font-bold text-green-600">KES {{ "%.2f"|format(stats.total_revenue) }}</p>
+            </div>
+
+            <!-- Platform Fees -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900">Platform Fees</h3>
+                <p class="text-3xl font-bold text-blue-600">KES {{ "%.2f"|format(stats.total_platform_fees) }}</p>
+            </div>
+
+            <!-- Total Transactions -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900">Total Transactions</h3>
+                <p class="text-3xl font-bold text-purple-600">{{ stats.total_transactions }}</p>
+            </div>
+
+            <!-- Active Drivers -->
+            <div class="bg-white rounded-lg shadow p-6">
+                <h3 class="text-lg font-medium text-gray-900">Active Drivers</h3>
+                <p class="text-3xl font-bold text-orange-600">{{ stats.active_drivers }}</p>
+            </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+                <h2 class="text-xl font-semibold text-gray-800">Recent Transactions</h2>
+                
+                <!-- Search and Filter -->
+                <div class="flex space-x-4">
+                    <input type="text" id="searchInput" placeholder="Search transactions..."
+                           class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    
+                    <select id="statusFilter" 
+                            class="rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="">All Statuses</option>
+                        <option value="completed">Completed</option>
+                        <option value="pending">Pending</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Driver ID</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Passenger</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Platform Fee</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200" id="transactionsTable">
+                        {% for tx in transactions %}
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {{ tx.created_at.strftime('%Y-%m-%d %H:%M') }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ tx.driver_id }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ tx.passenger_phone }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                KES {{ "%.2f"|format(tx.amount_paid) }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                KES {{ "%.2f"|format(tx.platform_fee) }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
+                                    {% if tx.status == 'completed' %}
+                                        bg-green-100 text-green-800
+                                    {% elif tx.status == 'pending' %}
+                                        bg-yellow-100 text-yellow-800
+                                    {% else %}
+                                        bg-red-100 text-red-800
+                                    {% endif %}">
+                                    {{ tx.status }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                {% if tx.mpesa_receipt %}
+                                    {{ tx.mpesa_receipt }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Search and filter functionality
+        const searchInput = document.getElementById('searchInput');
+        const statusFilter = document.getElementById('statusFilter');
+        const table = document.getElementById('transactionsTable');
+        const rows = table.getElementsByTagName('tr');
+
+        function filterTable() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const statusTerm = statusFilter.value.toLowerCase();
+
+            for (let row of rows) {
+                const text = row.textContent.toLowerCase();
+                const statusCell = row.querySelector('td:nth-child(6)');
+                const status = statusCell ? statusCell.textContent.toLowerCase().trim() : '';
+
+                const matchesSearch = text.includes(searchTerm);
+                const matchesStatus = !statusTerm || status === statusTerm;
+
+                row.style.display = matchesSearch && matchesStatus ? '' : 'none';
+            }
+        }
+
+        searchInput.addEventListener('input', filterTable);
+        statusFilter.addEventListener('change', filterTable);
+    </script>
+</body>
+</html>
+
+
