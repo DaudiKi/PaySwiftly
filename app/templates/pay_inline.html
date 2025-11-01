@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoPay - Pay {{ driver.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+    <!-- IntaSend Inline SDK -->
+    <script src="https://unpkg.com/intasend-inlinejs-sdk@4.0.5/build/intasend-inline.js"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-md mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-white text-2xl font-bold">Pay for Your Ride</h1>
+                        <p class="text-blue-100 text-sm mt-1">Powered by IntaSend</p>
+                    </div>
+                    <div class="bg-white rounded-full p-3">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <!-- Driver Info Card -->
+                <div class="mb-6 bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <h2 class="text-sm font-medium text-gray-500 mb-2">DRIVER DETAILS</h2>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Name:</span>
+                            <span class="font-semibold text-gray-900">{{ driver.name }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Vehicle:</span>
+                            <span class="font-semibold text-gray-900">{{ driver.vehicle_type.value|upper }} {{ driver.vehicle_number }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Platform Fee Info -->
+                <div class="mb-4 bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div class="text-sm text-blue-800">
+                            <strong>Platform fee:</strong> {{ platform_fee_percentage }}% + secure transaction fee
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Form -->
+                <form id="paymentForm" class="space-y-5">
+                    <input type="hidden" id="driverId" value="{{ driver.id }}">
+                    <input type="hidden" id="driverPhone" value="{{ driver.phone }}">
+                    <input type="hidden" id="driverName" value="{{ driver.name }}">
+                    
+                    <!-- Amount Input -->
+                    <div>
+                        <label for="amount" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Amount (KES) *
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-3.5 text-gray-500 font-medium">KES</span>
+                            <input 
+                                type="number" 
+                                id="amount" 
+                                name="amount" 
+                                required
+                                min="10"
+                                max="70000"
+                                step="1"
+                                class="w-full pl-16 pr-4 py-3 text-lg font-semibold rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                                placeholder="0">
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500">Enter the exact amount agreed with the driver (10-70,000 KES)</p>
+                    </div>
+
+                    <!-- Fee Breakdown Display -->
+                    <div id="feeBreakdown" class="hidden bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                        <div class="flex justify-between text-gray-600">
+                            <span>Payment amount:</span>
+                            <span id="displayAmount" class="font-medium">KES 0.00</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600">
+                            <span>Platform fee:</span>
+                            <span id="displayFee" class="font-medium">KES 0.00</span>
+                        </div>
+                        <div class="border-t border-gray-300 pt-2 flex justify-between font-semibold text-gray-900">
+                            <span>Driver receives:</span>
+                            <span id="displayDriverAmount" class="text-green-600">KES 0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Phone Input -->
+                    <div>
+                        <label for="phone" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Your M-Pesa Number *
+                        </label>
+                        <input 
+                            type="tel" 
+                            id="phone" 
+                            name="phone" 
+                            required
+                            {% if passenger_phone %}readonly{% endif %}
+                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 {% if passenger_phone %}bg-gray-100 text-gray-600{% else %}focus:border-blue-500 focus:ring-2 focus:ring-blue-200{% endif %} transition"
+                            value="{{ passenger_phone if passenger_phone else '' }}"
+                            placeholder="254722000000"
+                            pattern="254[0-9]{9}">
+                        <p class="mt-2 text-xs text-gray-500">
+                            Format: 254XXXXXXXXX (Safaricom, Airtel, or Telkom)
+                        </p>
+                    </div>
+
+                    <!-- Email Input (optional) -->
+                    <div>
+                        <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Email (Optional)
+                        </label>
+                        <input 
+                            type="email" 
+                            id="email" 
+                            name="email"
+                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                            placeholder="your@email.com">
+                        <p class="mt-2 text-xs text-gray-500">Receipt will be sent to this email</p>
+                    </div>
+
+                    <!-- Name Inputs -->
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label for="firstName" class="block text-sm font-semibold text-gray-700 mb-2">
+                                First Name
+                            </label>
+                            <input 
+                                type="text" 
+                                id="firstName" 
+                                name="firstName"
+                                class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                                placeholder="John">
+                        </div>
+                        <div>
+                            <label for="lastName" class="block text-sm font-semibold text-gray-700 mb-2">
+                                Last Name
+                            </label>
+                            <input 
+                                type="text" 
+                                id="lastName" 
+                                name="lastName"
+                                class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                                placeholder="Doe">
+                        </div>
+                    </div>
+
+                    <!-- Payment Button (IntaSend Inline SDK) -->
+                    <button 
+                        type="button"
+                        id="intaSendPayButton"
+                        class="w-full bg-gradient-to-r from-green-600 to-green-700 text-white py-4 px-6 rounded-lg font-bold text-lg hover:from-green-700 hover:to-green-800 focus:outline-none focus:ring-4 focus:ring-green-300 transform hover:scale-[1.02] transition-all duration-200 shadow-lg"
+                        data-amount=""
+                        data-currency="KES"
+                        data-email=""
+                        data-phone_number=""
+                        data-first_name=""
+                        data-last_name=""
+                        data-api_ref="">
+                        <span class="flex items-center justify-center">
+                            <svg class="w-6 h-6 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Pay with M-Pesa
+                        </span>
+                    </button>
+                    
+                    <p class="text-xs text-center text-gray-500 mt-2">
+                        Secure payment via IntaSend • Your driver will receive payment instantly
+                    </p>
+                </form>
+
+                <!-- Status Messages -->
+                <div id="statusMessage" class="hidden mt-6"></div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                <div class="flex items-center justify-center text-xs text-gray-500">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                    Secured by IntaSend & GoPay
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const platformFeePercentage = {{ platform_fee_percentage }};
+        const publishableKey = "{{ publishable_key }}";
+        const isTestMode = {{ 'true' if is_test_mode else 'false' }};
+        
+        // Calculate and display fee breakdown
+        document.getElementById('amount').addEventListener('input', function(e) {
+            const amount = parseFloat(e.target.value) || 0;
+            const button = document.getElementById('intaSendPayButton');
+            
+            if (amount >= 10) {
+                const fee = (amount * platformFeePercentage / 100).toFixed(2);
+                const driverAmount = (amount - fee).toFixed(2);
+                
+                document.getElementById('displayAmount').textContent = `KES ${amount.toFixed(2)}`;
+                document.getElementById('displayFee').textContent = `KES ${fee}`;
+                document.getElementById('displayDriverAmount').textContent = `KES ${driverAmount}`;
+                document.getElementById('feeBreakdown').classList.remove('hidden');
+                
+                // Update button data
+                button.setAttribute('data-amount', Math.round(amount));
+            } else {
+                document.getElementById('feeBreakdown').classList.add('hidden');
+            }
+        });
+        
+        // Update button attributes when other fields change
+        ['phone', 'email', 'firstName', 'lastName'].forEach(fieldId => {
+            const field = document.getElementById(fieldId);
+            if (field) {
+                field.addEventListener('input', updateButtonData);
+            }
+        });
+        
+        function updateButtonData() {
+            const button = document.getElementById('intaSendPayButton');
+            const amount = document.getElementById('amount').value;
+            const phone = document.getElementById('phone').value;
+            const email = document.getElementById('email').value;
+            const firstName = document.getElementById('firstName').value;
+            const lastName = document.getElementById('lastName').value;
+            const driverId = document.getElementById('driverId').value;
+            const transactionRef = `GOPAY-${driverId}-${Date.now()}`;
+            
+            button.setAttribute('data-amount', Math.round(amount));
+            button.setAttribute('data-phone_number', phone);
+            button.setAttribute('data-email', email || 'noreply@gopay.com');
+            button.setAttribute('data-first_name', firstName || 'GoPay');
+            button.setAttribute('data-last_name', lastName || 'Customer');
+            button.setAttribute('data-api_ref', transactionRef);
+        }
+        
+        // Initialize IntaSend Inline SDK
+        const intaSend = new window.IntaSend({
+            publicAPIKey: publishableKey,
+            live: !isTestMode
+        });
+        
+        // Handle successful payment
+        intaSend.on("COMPLETE", async (results) => {
+            console.log("Payment completed:", results);
+            showStatus('success', 'Payment Successful!', 
+                `Thank you! Your payment has been received. The driver will receive KES ${document.getElementById('displayDriverAmount').textContent.replace('KES ', '')} shortly.`);
+            
+            // Record transaction in backend
+            try {
+                const response = await fetch('/api/pay', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        driver_id: document.getElementById('driverId').value,
+                        amount: parseFloat(document.getElementById('amount').value),
+                        passenger_phone: document.getElementById('phone').value,
+                        passenger_email: document.getElementById('email').value,
+                        passenger_name: `${document.getElementById('firstName').value} ${document.getElementById('lastName').value}`.trim(),
+                        intasend_data: results
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log("Transaction recorded:", data);
+                }
+            } catch (error) {
+                console.error("Error recording transaction:", error);
+            }
+        });
+        
+        // Handle failed payment
+        intaSend.on("FAILED", (results) => {
+            console.log("Payment failed:", results);
+            showStatus('error', 'Payment Failed', 
+                'Your payment could not be processed. Please try again or contact support if the problem persists.');
+        });
+        
+        // Handle pending payment
+        intaSend.on("IN-PROGRESS", (results) => {
+            console.log("Payment in progress:", results);
+            showStatus('info', 'Processing Payment', 
+                'Your payment is being processed. Please wait...');
+        });
+        
+        function showStatus(type, title, message) {
+            const statusDiv = document.getElementById('statusMessage');
+            const colors = {
+                success: 'bg-green-50 border-green-300 text-green-800',
+                error: 'bg-red-50 border-red-300 text-red-800',
+                info: 'bg-blue-50 border-blue-300 text-blue-800'
+            };
+            
+            const icons = {
+                success: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>',
+                error: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>',
+                info: '<svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>'
+            };
+            
+            statusDiv.className = `rounded-xl p-6 border-2 ${colors[type]}`;
+            statusDiv.innerHTML = `
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">${icons[type]}</div>
+                    <div class="ml-3 flex-1">
+                        <h3 class="text-lg font-semibold mb-1">${title}</h3>
+                        <p class="text-sm">${message}</p>
+                        ${type === 'success' ? '<button onclick="location.reload()" class="mt-3 text-sm font-medium underline">Make Another Payment</button>' : '<button onclick="location.reload()" class="mt-3 text-sm font-medium underline">Try Again</button>'}
+                    </div>
+                </div>
+            `;
+            statusDiv.classList.remove('hidden');
+            
+            // Hide form on success
+            if (type === 'success') {
+                document.getElementById('paymentForm').style.display = 'none';
+            }
+        }
+        
+        // Add click handler to button
+        document.getElementById('intaSendPayButton').addEventListener('click', function() {
+            // Validate form
+            const amount = document.getElementById('amount').value;
+            const phone = document.getElementById('phone').value;
+            
+            if (!amount || parseFloat(amount) < 10) {
+                alert('Please enter an amount of at least 10 KES');
+                return;
+            }
+            
+            if (!phone || !phone.match(/^254[0-9]{9}$/)) {
+                alert('Please enter a valid phone number (format: 254XXXXXXXXX)');
+                return;
+            }
+            
+            // Update button data
+            updateButtonData();
+        });
+    </script>
+</body>
+</html>
+
+

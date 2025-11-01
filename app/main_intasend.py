@@ -1,0 +1,568 @@
+import os
+import logging
+from typing import List
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
+
+from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, Header
+from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+
+from .models import (
+    Driver, Transaction, AdminStats, 
+    DriverRegistration, PaymentRequest, PaymentInitiateResponse,
+    IntaSendWebhook, TransactionStatusResponse, TransactionStatus,
+    Payout, PayoutStatus, PlatformFee
+)
+from .supabase_util import SupabaseManager
+from .intasend import IntaSendAPI
+from .qr_utils import generate_payment_qr
+
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Initialize FastAPI app
+app = FastAPI(
+    title="GoPay Payment Aggregator with IntaSend",
+    description="QR-based payment collection with automatic driver payouts",
+    version="2.0.0"
+)
+
+# Setup CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount static files
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Setup templates
+templates = Jinja2Templates(directory="app/templates")
+
+# Initialize IntaSend API and Supabase
+intasend_api = IntaSendAPI()
+supabase_manager = SupabaseManager()
+
+
+# === Background Tasks ===
+
+async def process_payout(transaction_id: str, driver_id: str, driver_phone: str, amount: float, driver_name: str):
+    """
+    Background task to process driver payout after successful collection.
+    This runs asynchronously after payment collection is confirmed.
+    """
+    try:
+        logger.info(f"Processing payout for transaction {transaction_id}")
+        
+        # Create payout record
+        payout = Payout(
+            transaction_id=transaction_id,
+            driver_id=driver_id,
+            amount=amount,
+            status=PayoutStatus.PENDING
+        )
+        payout_id = await supabase_manager.create_payout(payout)
+        logger.info(f"Payout record created: {payout_id}")
+        
+        # Initiate payout via IntaSend
+        payout_response = await intasend_api.initiate_payout(
+            phone_number=driver_phone,
+            amount=amount,
+            reference=transaction_id,
+            name=driver_name
+        )
+        
+        tracking_id = payout_response.get('tracking_id')
+        
+        if tracking_id:
+            # Update payout record with tracking ID
+            await supabase_manager.update_payout_status(
+                payout_id=payout_id,
+                status=PayoutStatus.PROCESSING,
+                tracking_id=tracking_id,
+                intasend_response=payout_response
+            )
+            
+            # Update transaction with payout details
+            await supabase_manager.update_transaction_payout(
+                transaction_id=transaction_id,
+                tracking_id=tracking_id,
+                payout_status='processing',
+                payout_response=payout_response
+            )
+            
+            logger.info(f"Payout initiated successfully. Tracking ID: {tracking_id}")
+        else:
+            raise Exception("No tracking ID in payout response")
+            
+    except Exception as e:
+        logger.error(f"Payout processing failed: {str(e)}")
+        # Update payout status to failed
+        try:
+            await supabase_manager.update_payout_status(
+                payout_id=payout_id,
+                status=PayoutStatus.FAILED,
+                failure_reason=str(e)
+            )
+            await supabase_manager.update_transaction_payout(
+                transaction_id=transaction_id,
+                tracking_id='',
+                payout_status='failed'
+            )
+        except:
+            pass
+
+
+# === API Routes ===
+
+@app.get("/", response_class=HTMLResponse)
+async def root():
+    """Root endpoint with API information."""
+    return """
+    <html>
+        <head><title>GoPay - IntaSend Integration</title></head>
+        <body style="font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px;">
+            <h1>🚗 GoPay Payment Aggregator</h1>
+            <p>QR-based payment collection with automatic driver payouts via IntaSend</p>
+            <h2>API Endpoints:</h2>
+            <ul>
+                <li><code>POST /api/register_driver</code> - Register new driver</li>
+                <li><code>GET /api/driver/{driver_id}</code> - Get driver details</li>
+                <li><code>GET /pay?driver_id={id}&phone={phone}</code> - Payment page</li>
+                <li><code>POST /api/pay</code> - Initiate payment collection</li>
+                <li><code>POST /api/webhooks/intasend</code> - IntaSend webhook handler</li>
+                <li><code>GET /api/transaction/{id}/status</code> - Check transaction status</li>
+                <li><code>GET /driver/{driver_id}/dashboard</code> - Driver dashboard</li>
+                <li><code>GET /admin/dashboard</code> - Admin dashboard</li>
+            </ul>
+            <p><a href="/docs">📚 View API Documentation</a></p>
+        </body>
+    </html>
+    """
+
+
+@app.post("/api/register_driver", response_model=dict)
+async def register_driver(driver_data: DriverRegistration) -> dict:
+    """
+    Register a new driver and generate their payment QR code.
+    
+    The QR code contains a link to the payment page with the driver's ID.
+    Passengers scan this QR code to pay the driver.
+    """
+    try:
+        # Create driver object
+        driver = Driver(
+            id="",  # Will be set by Supabase
+            name=driver_data.name,
+            phone=driver_data.phone,
+            email=driver_data.email,
+            vehicle_type=driver_data.vehicle_type,
+            vehicle_number=driver_data.vehicle_number
+        )
+        
+        # Save driver to Supabase
+        driver_id = await supabase_manager.create_driver(driver)
+        logger.info(f"Driver registered: {driver_id}")
+        
+        # Generate QR code with driver's phone pre-filled
+        qr_bytes = generate_payment_qr(driver_id, driver_data.phone)
+        
+        # Upload QR code to Supabase Storage
+        qr_url = await supabase_manager.upload_qr_code(driver_id, qr_bytes)
+        
+        # Update driver with QR code URL
+        await supabase_manager.update_driver(driver_id, {"qr_code_url": qr_url})
+        
+        return {
+            "status": "success",
+            "driver_id": driver_id,
+            "qr_code_url": qr_url,
+            "message": "Driver registered successfully"
+        }
+    except Exception as e:
+        logger.error(f"Driver registration failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/driver/{driver_id}", response_model=Driver)
+async def get_driver(driver_id: str) -> Driver:
+    """Get driver details by ID."""
+    driver = await supabase_manager.get_driver(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    return driver
+
+
+@app.get("/pay", response_class=HTMLResponse)
+async def payment_page(request: Request, driver_id: str, phone: str = None, mode: str = "backend"):
+    """
+    Render payment page for a driver.
+    
+    Passengers access this page by scanning the driver's QR code.
+    The phone parameter can be pre-filled for better UX.
+    
+    Args:
+        mode: "backend" for server-side STK push, "inline" for IntaSend SDK
+    """
+    driver = await supabase_manager.get_driver(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    # Calculate fee information for display
+    fee_info = intasend_api.calculate_fees(100)  # Example for 100 KES
+    
+    # Choose template based on mode
+    template_name = "pay_inline.html" if mode == "inline" else "pay.html"
+    
+    return templates.TemplateResponse(
+        template_name,
+        {
+            "request": request, 
+            "driver": driver,
+            "passenger_phone": phone,
+            "platform_fee_percentage": fee_info['fee_percentage'],
+            "publishable_key": intasend_api.publishable_key,
+            "is_test_mode": intasend_api.is_test
+        }
+    )
+
+
+@app.post("/api/pay", response_model=PaymentInitiateResponse)
+async def initiate_payment(payment: PaymentRequest, background_tasks: BackgroundTasks) -> PaymentInitiateResponse:
+    """
+    Initiate payment collection via IntaSend STK Push.
+    
+    Workflow:
+    1. Verify driver exists
+    2. Calculate platform fee and driver amount
+    3. Create transaction record
+    4. Initiate IntaSend collection
+    5. Return response to frontend
+    6. Wait for webhook to confirm payment
+    7. Automatically initiate payout to driver (background task)
+    """
+    try:
+        # Verify driver exists
+        driver = await supabase_manager.get_driver(payment.driver_id)
+        if not driver:
+            raise HTTPException(status_code=404, detail="Driver not found")
+        
+        # Calculate fees
+        fee_breakdown = intasend_api.calculate_fees(payment.amount)
+        platform_fee = fee_breakdown['platform_fee']
+        driver_amount = fee_breakdown['driver_amount']
+        
+        logger.info(f"Payment initiated: {payment.amount} KES - Fee: {platform_fee} - Driver: {driver_amount}")
+        
+        # Create pending transaction
+        transaction = Transaction(
+            id="",  # Will be set by Supabase
+            driver_id=payment.driver_id,
+            passenger_phone=payment.passenger_phone,
+            amount_paid=payment.amount,
+            platform_fee=platform_fee,
+            driver_amount=driver_amount,
+            status=TransactionStatus.PENDING,
+            fee_percentage=fee_breakdown['fee_percentage'],
+            fee_fixed=fee_breakdown['fee_fixed']
+        )
+        
+        # Save transaction
+        transaction_id = await supabase_manager.create_transaction_with_intasend(transaction)
+        logger.info(f"Transaction created: {transaction_id}")
+        
+        # Initiate IntaSend collection (STK Push)
+        collection_response = await intasend_api.initiate_collection(
+            phone_number=payment.passenger_phone,
+            amount=payment.amount,
+            reference=transaction_id,
+            email=payment.passenger_email,
+            name=payment.passenger_name
+        )
+        
+        collection_id = collection_response.get('id')
+        
+        if collection_id:
+            # Update transaction with collection ID
+            await supabase_manager.update_transaction_collection(
+                transaction_id=transaction_id,
+                collection_id=collection_id,
+                collection_status='pending',
+                collection_response=collection_response
+            )
+            
+            logger.info(f"Collection initiated. ID: {collection_id}")
+            
+            return PaymentInitiateResponse(
+                status="success",
+                transaction_id=transaction_id,
+                collection_id=collection_id,
+                message="Payment request sent. Please check your phone for M-Pesa prompt.",
+                amount=payment.amount,
+                platform_fee=platform_fee,
+                driver_amount=driver_amount
+            )
+        else:
+            raise Exception("Failed to initiate collection")
+            
+    except Exception as e:
+        logger.error(f"Payment initiation failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/webhooks/intasend")
+async def intasend_webhook(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    x_intasend_signature: str = Header(None)
+):
+    """
+    Handle IntaSend webhooks for payment and payout status updates.
+    
+    This endpoint receives real-time updates from IntaSend when:
+    - Payment collection is completed/failed
+    - Payout is completed/failed
+    """
+    try:
+        # Get raw body for signature verification
+        body = await request.body()
+        body_str = body.decode('utf-8')
+        
+        # Verify webhook signature (if configured)
+        if x_intasend_signature and os.getenv('INTASEND_WEBHOOK_SECRET'):
+            is_valid = intasend_api.validate_webhook_signature(body_str, x_intasend_signature)
+            if not is_valid:
+                logger.warning("Invalid webhook signature")
+                raise HTTPException(status_code=401, detail="Invalid signature")
+        
+        # Parse webhook data
+        webhook_data = await request.json()
+        logger.info(f"Webhook received: {webhook_data.get('state')} - {webhook_data.get('api_ref')}")
+        
+        webhook = IntaSendWebhook(**webhook_data)
+        
+        # Determine if this is a collection or payout webhook
+        if webhook.api_ref:
+            # This is a collection webhook
+            await handle_collection_webhook(webhook, background_tasks)
+        elif webhook.tracking_id:
+            # This is a payout webhook
+            await handle_payout_webhook(webhook)
+        else:
+            logger.warning(f"Unknown webhook type: {webhook_data}")
+        
+        return {"status": "success", "message": "Webhook processed"}
+        
+    except Exception as e:
+        logger.error(f"Webhook processing failed: {str(e)}")
+        # Return 200 to prevent IntaSend from retrying
+        return {"status": "error", "message": str(e)}
+
+
+async def handle_collection_webhook(webhook: IntaSendWebhook, background_tasks: BackgroundTasks):
+    """Handle payment collection webhook."""
+    transaction_id = webhook.api_ref
+    state = webhook.state.upper()
+    
+    # Get transaction
+    transaction = await supabase_manager.get_transaction(transaction_id)
+    if not transaction:
+        logger.error(f"Transaction not found: {transaction_id}")
+        return
+    
+    # Update transaction based on state
+    if state == "COMPLETE":
+        # Payment collected successfully
+        await supabase_manager.update_transaction_collection(
+            transaction_id=transaction_id,
+            collection_id=webhook.id or webhook.invoice_id,
+            collection_status='completed',
+            collection_response=webhook.model_dump()
+        )
+        
+        # Record platform fee
+        platform_fee = PlatformFee(
+            transaction_id=transaction_id,
+            amount=transaction.platform_fee,
+            fee_type="percentage",
+            percentage_applied=transaction.fee_percentage,
+            fixed_amount_applied=transaction.fee_fixed
+        )
+        await supabase_manager.create_platform_fee(platform_fee)
+        
+        # Get driver details for payout
+        driver = await supabase_manager.get_driver(transaction.driver_id)
+        
+        # Schedule automatic payout in background
+        background_tasks.add_task(
+            process_payout,
+            transaction_id=transaction_id,
+            driver_id=transaction.driver_id,
+            driver_phone=driver.phone,
+            amount=transaction.driver_amount,
+            driver_name=driver.name
+        )
+        
+        logger.info(f"Payment collected. Payout scheduled for {transaction.driver_amount} KES")
+        
+    elif state == "FAILED":
+        # Payment failed
+        await supabase_manager.update_transaction_collection(
+            transaction_id=transaction_id,
+            collection_id=webhook.id or webhook.invoice_id,
+            collection_status='failed',
+            collection_response=webhook.model_dump()
+        )
+        logger.info(f"Payment failed for transaction {transaction_id}")
+
+
+async def handle_payout_webhook(webhook: IntaSendWebhook):
+    """Handle payout webhook."""
+    tracking_id = webhook.tracking_id
+    state = webhook.state.upper()
+    
+    # Get payout record
+    payout = await supabase_manager.get_payout_by_tracking_id(tracking_id)
+    if not payout:
+        logger.error(f"Payout not found: {tracking_id}")
+        return
+    
+    # Update payout based on state
+    if state == "COMPLETE":
+        await supabase_manager.update_payout_status(
+            payout_id=payout.id,
+            status=PayoutStatus.COMPLETED,
+            intasend_response=webhook.model_dump()
+        )
+        
+        await supabase_manager.update_transaction_payout(
+            transaction_id=payout.transaction_id,
+            tracking_id=tracking_id,
+            payout_status='completed',
+            payout_response=webhook.model_dump()
+        )
+        
+        logger.info(f"Payout completed: {payout.amount} KES to driver {payout.driver_id}")
+        
+    elif state == "FAILED":
+        await supabase_manager.update_payout_status(
+            payout_id=payout.id,
+            status=PayoutStatus.FAILED,
+            intasend_response=webhook.model_dump(),
+            failure_reason=f"IntaSend payout failed: {state}"
+        )
+        
+        await supabase_manager.update_transaction_payout(
+            transaction_id=payout.transaction_id,
+            tracking_id=tracking_id,
+            payout_status='failed',
+            payout_response=webhook.model_dump()
+        )
+        
+        logger.error(f"Payout failed for driver {payout.driver_id}")
+
+
+@app.get("/api/transaction/{transaction_id}/status", response_model=TransactionStatusResponse)
+async def get_transaction_status(transaction_id: str) -> TransactionStatusResponse:
+    """
+    Get current status of a transaction.
+    
+    Returns detailed information about payment collection and payout status.
+    """
+    transaction = await supabase_manager.get_transaction(transaction_id)
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaction not found")
+    
+    return TransactionStatusResponse(
+        transaction_id=transaction.id,
+        status=transaction.status,
+        collection_status=transaction.collection_status,
+        payout_status=transaction.payout_status,
+        amount_paid=transaction.amount_paid,
+        platform_fee=transaction.platform_fee,
+        driver_amount=transaction.driver_amount,
+        created_at=transaction.created_at,
+        collection_completed_at=transaction.collection_completed_at,
+        payout_completed_at=transaction.payout_completed_at
+    )
+
+
+@app.get("/driver/{driver_id}/dashboard", response_class=HTMLResponse)
+async def driver_dashboard(request: Request, driver_id: str):
+    """Render driver dashboard with earnings and transaction history."""
+    driver = await supabase_manager.get_driver(driver_id)
+    if not driver:
+        raise HTTPException(status_code=404, detail="Driver not found")
+    
+    transactions = await supabase_manager.get_driver_transactions(driver_id)
+    payouts = await supabase_manager.get_driver_payouts(driver_id)
+    
+    return templates.TemplateResponse(
+        "driver_dashboard.html",
+        {
+            "request": request,
+            "driver": driver,
+            "transactions": transactions,
+            "payouts": payouts
+        }
+    )
+
+
+@app.get("/admin/dashboard", response_class=HTMLResponse)
+async def admin_dashboard(request: Request):
+    """Render admin dashboard with platform statistics."""
+    stats = await supabase_manager.get_admin_stats()
+    transactions = await supabase_manager.get_all_transactions()
+    
+    return templates.TemplateResponse(
+        "admin_dashboard.html",
+        {
+            "request": request,
+            "stats": stats,
+            "transactions": transactions
+        }
+    )
+
+
+@app.get("/api/admin/stats", response_model=AdminStats)
+async def get_admin_stats() -> AdminStats:
+    """Get platform statistics for admin."""
+    return await supabase_manager.get_admin_stats()
+
+
+@app.get("/api/driver/{driver_id}/transactions", response_model=List[Transaction])
+async def get_driver_transactions(driver_id: str) -> List[Transaction]:
+    """Get transactions for a specific driver."""
+    return await supabase_manager.get_driver_transactions(driver_id)
+
+
+@app.get("/api/driver/{driver_id}/payouts", response_model=List[Payout])
+async def get_driver_payouts(driver_id: str) -> List[Payout]:
+    """Get payouts for a specific driver."""
+    return await supabase_manager.get_driver_payouts(driver_id)
+
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    """Health check endpoint for monitoring."""
+    return {
+        "status": "healthy",
+        "service": "GoPay IntaSend",
+        "version": "2.0.0"
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+

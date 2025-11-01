@@ -2,7 +2,10 @@ import os
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from supabase import create_client, Client
-from .models import Driver, Transaction, AdminStats, TransactionStatus
+from .models import (
+    Driver, Transaction, AdminStats, TransactionStatus,
+    Payout, PayoutStatus, PlatformFee
+)
 
 class SupabaseManager:
     def __init__(self):
@@ -177,3 +180,199 @@ class SupabaseManager:
                  .execute())
         
         return len(result.data) > 0
+    
+    # === IntaSend-specific methods ===
+    
+    async def create_transaction_with_intasend(self, transaction: Transaction) -> str:
+        """Create a new transaction for IntaSend workflow."""
+        transaction_data = transaction.model_dump(
+            exclude={'id', 'created_at', 'updated_at'},
+            exclude_none=True
+        )
+        transaction_data['created_at'] = datetime.utcnow().isoformat()
+        transaction_data['updated_at'] = datetime.utcnow().isoformat()
+        
+        result = self.supabase.table('transactions').insert(transaction_data).execute()
+        
+        if result.data:
+            return result.data[0]['id']
+        else:
+            raise Exception("Failed to create transaction")
+    
+    async def update_transaction_collection(
+        self,
+        transaction_id: str,
+        collection_id: str,
+        collection_status: str,
+        collection_response: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Update transaction with IntaSend collection details."""
+        update_data = {
+            'intasend_collection_id': collection_id,
+            'collection_status': collection_status,
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        if collection_response:
+            update_data['collection_response'] = collection_response
+        
+        if collection_status == 'completed':
+            update_data['status'] = TransactionStatus.PAYOUT_PENDING.value
+            update_data['collection_completed_at'] = datetime.utcnow().isoformat()
+        elif collection_status == 'failed':
+            update_data['status'] = TransactionStatus.FAILED.value
+        
+        result = (self.supabase.table('transactions')
+                 .update(update_data)
+                 .eq('id', transaction_id)
+                 .execute())
+        
+        return len(result.data) > 0
+    
+    async def get_transaction(self, transaction_id: str) -> Optional[Transaction]:
+        """Get transaction by ID."""
+        result = (self.supabase.table('transactions')
+                 .select('*')
+                 .eq('id', transaction_id)
+                 .execute())
+        
+        if result.data:
+            return Transaction(**result.data[0])
+        return None
+    
+    async def get_transaction_by_collection_id(self, collection_id: str) -> Optional[Transaction]:
+        """Get transaction by IntaSend collection ID."""
+        result = (self.supabase.table('transactions')
+                 .select('*')
+                 .eq('intasend_collection_id', collection_id)
+                 .execute())
+        
+        if result.data:
+            return Transaction(**result.data[0])
+        return None
+    
+    async def create_payout(self, payout: Payout) -> str:
+        """Create a new payout record."""
+        payout_data = payout.model_dump(
+            exclude={'id', 'created_at', 'updated_at'},
+            exclude_none=True
+        )
+        payout_data['initiated_at'] = datetime.utcnow().isoformat()
+        payout_data['created_at'] = datetime.utcnow().isoformat()
+        payout_data['updated_at'] = datetime.utcnow().isoformat()
+        
+        result = self.supabase.table('payouts').insert(payout_data).execute()
+        
+        if result.data:
+            return result.data[0]['id']
+        else:
+            raise Exception("Failed to create payout")
+    
+    async def update_payout_status(
+        self,
+        payout_id: str,
+        status: PayoutStatus,
+        tracking_id: Optional[str] = None,
+        intasend_response: Optional[Dict[str, Any]] = None,
+        failure_reason: Optional[str] = None
+    ) -> bool:
+        """Update payout status."""
+        update_data = {
+            'status': status.value,
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        if tracking_id:
+            update_data['tracking_id'] = tracking_id
+        if intasend_response:
+            update_data['intasend_response'] = intasend_response
+        if failure_reason:
+            update_data['failure_reason'] = failure_reason
+        if status == PayoutStatus.COMPLETED:
+            update_data['completed_at'] = datetime.utcnow().isoformat()
+        
+        result = (self.supabase.table('payouts')
+                 .update(update_data)
+                 .eq('id', payout_id)
+                 .execute())
+        
+        return len(result.data) > 0
+    
+    async def update_transaction_payout(
+        self,
+        transaction_id: str,
+        tracking_id: str,
+        payout_status: str,
+        payout_response: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """Update transaction with payout details."""
+        update_data = {
+            'intasend_tracking_id': tracking_id,
+            'payout_status': payout_status,
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        if payout_response:
+            update_data['payout_response'] = payout_response
+        
+        if payout_status == 'completed':
+            update_data['status'] = TransactionStatus.PAYOUT_COMPLETED.value
+            update_data['payout_completed_at'] = datetime.utcnow().isoformat()
+        elif payout_status == 'failed':
+            update_data['status'] = TransactionStatus.PAYOUT_FAILED.value
+        
+        result = (self.supabase.table('transactions')
+                 .update(update_data)
+                 .eq('id', transaction_id)
+                 .execute())
+        
+        return len(result.data) > 0
+    
+    async def get_payout_by_tracking_id(self, tracking_id: str) -> Optional[Payout]:
+        """Get payout by tracking ID."""
+        result = (self.supabase.table('payouts')
+                 .select('*')
+                 .eq('tracking_id', tracking_id)
+                 .execute())
+        
+        if result.data:
+            return Payout(**result.data[0])
+        return None
+    
+    async def create_platform_fee(self, platform_fee: PlatformFee) -> str:
+        """Record platform fee collection."""
+        fee_data = platform_fee.model_dump(
+            exclude={'id', 'created_at'},
+            exclude_none=True
+        )
+        fee_data['collected_at'] = datetime.utcnow().isoformat()
+        fee_data['created_at'] = datetime.utcnow().isoformat()
+        
+        result = self.supabase.table('platform_fees').insert(fee_data).execute()
+        
+        if result.data:
+            return result.data[0]['id']
+        else:
+            raise Exception("Failed to record platform fee")
+    
+    async def get_driver_payouts(self, driver_id: str, limit: int = 50) -> List[Payout]:
+        """Get payouts for a specific driver."""
+        result = (self.supabase.table('payouts')
+                 .select('*')
+                 .eq('driver_id', driver_id)
+                 .order('created_at', desc=True)
+                 .limit(limit)
+                 .execute())
+        
+        return [Payout(**payout) for payout in result.data]
+    
+    async def get_pending_payouts(self, limit: int = 100) -> List[Payout]:
+        """Get all pending payouts."""
+        result = (self.supabase.table('payouts')
+                 .select('*')
+                 .eq('status', PayoutStatus.PENDING.value)
+                 .order('created_at', desc=False)
+                 .limit(limit)
+                 .execute())
+        
+        return [Payout(**payout) for payout in result.data]

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoPay - Pay {{ driver.name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+    <style>
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .progress-bar {
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-blue-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-md mx-auto bg-white rounded-2xl shadow-2xl overflow-hidden">
+            <!-- Header -->
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-white text-2xl font-bold">Pay for Your Ride</h1>
+                        <p class="text-blue-100 text-sm mt-1">Secure payment via M-Pesa</p>
+                    </div>
+                    <div class="bg-white rounded-full p-3">
+                        <svg class="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="p-6">
+                <!-- Driver Info Card -->
+                <div class="mb-6 bg-gray-50 rounded-xl p-4 border border-gray-200">
+                    <h2 class="text-sm font-medium text-gray-500 mb-2">DRIVER DETAILS</h2>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Name:</span>
+                            <span class="font-semibold text-gray-900">{{ driver.name }}</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-gray-600">Vehicle:</span>
+                            <span class="font-semibold text-gray-900">{{ driver.vehicle_type.value|upper }} {{ driver.vehicle_number }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Platform Fee Info -->
+                <div class="mb-4 bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <div class="flex items-start">
+                        <svg class="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <div class="text-sm text-blue-800">
+                            <strong>Platform fee:</strong> {{ platform_fee_percentage }}% of payment amount
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Form -->
+                <form id="paymentForm" class="space-y-5">
+                    <input type="hidden" id="driverId" value="{{ driver.id }}">
+                    
+                    <!-- Amount Input -->
+                    <div>
+                        <label for="amount" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Amount (KES) *
+                        </label>
+                        <div class="relative">
+                            <span class="absolute left-4 top-3.5 text-gray-500 font-medium">KES</span>
+                            <input 
+                                type="number" 
+                                id="amount" 
+                                name="amount" 
+                                required
+                                min="1"
+                                max="70000"
+                                step="1"
+                                class="w-full pl-16 pr-4 py-3 text-lg font-semibold rounded-lg border-2 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition"
+                                placeholder="0">
+                        </div>
+                        <p class="mt-2 text-xs text-gray-500">Enter the exact amount agreed with the driver</p>
+                    </div>
+
+                    <!-- Fee Breakdown Display -->
+                    <div id="feeBreakdown" class="hidden bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
+                        <div class="flex justify-between text-gray-600">
+                            <span>Payment amount:</span>
+                            <span id="displayAmount" class="font-medium">KES 0.00</span>
+                        </div>
+                        <div class="flex justify-between text-gray-600">
+                            <span>Platform fee:</span>
+                            <span id="displayFee" class="font-medium">KES 0.00</span>
+                        </div>
+                        <div class="border-t border-gray-300 pt-2 flex justify-between font-semibold text-gray-900">
+                            <span>Driver receives:</span>
+                            <span id="displayDriverAmount" class="text-green-600">KES 0.00</span>
+                        </div>
+                    </div>
+
+                    <!-- Phone Input -->
+                    <div>
+                        <label for="phone" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Your M-Pesa Number *
+                        </label>
+                        <input 
+                            type="tel" 
+                            id="phone" 
+                            name="phone" 
+                            required
+                            {% if passenger_phone %}readonly{% endif %}
+                            class="w-full px-4 py-3 rounded-lg border-2 border-gray-300 {% if passenger_phone %}bg-gray-100 text-gray-600{% else %}focus:border-blue-500 focus:ring-2 focus:ring-blue-200{% endif %} transition"
+                            value="{{ passenger_phone if passenger_phone else '' }}"
+                            placeholder="254722000000"
+                            pattern="254[0-9]{9}">
+                        <p class="mt-2 text-xs text-gray-500">
+                            <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                            </svg>
+                            You'll receive an M-Pesa prompt to enter your PIN
+                        </p>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button 
+                        type="submit"
+                        id="submitBtn"
+                        class="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-4 px-6 rounded-lg font-bold text-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-4 focus:ring-blue-300 transform hover:scale-[1.02] transition-all duration-200 shadow-lg">
+                        <span id="submitBtnText">Pay Now</span>
+                    </button>
+                </form>
+
+                <!-- Loading State -->
+                <div id="loadingState" class="hidden mt-6">
+                    <div class="bg-blue-50 rounded-xl p-6 border border-blue-200">
+                        <div class="flex flex-col items-center">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-blue-600 mb-4"></div>
+                            <h3 class="text-lg font-semibold text-gray-900 mb-2">Processing Payment...</h3>
+                            <p class="text-sm text-gray-600 text-center mb-4" id="loadingMessage">
+                                Sending M-Pesa STK push to your phone
+                            </p>
+                            <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                <div id="progressBar" class="progress-bar bg-blue-600 h-2 rounded-full"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 text-center">
+                                This may take a few moments. Please don't close this page.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STK Push Waiting State -->
+                <div id="stkWaitingState" class="hidden mt-6">
+                    <div class="bg-green-50 rounded-xl p-6 border-2 border-green-300">
+                        <div class="flex flex-col items-center text-center">
+                            <div class="bg-green-100 rounded-full p-4 mb-4">
+                                <svg class="w-12 h-12 text-green-600 pulse-animation" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Check Your Phone!</h3>
+                            <p class="text-gray-700 mb-4">
+                                An M-Pesa payment prompt has been sent to:<br>
+                                <strong id="stkPhone" class="text-lg text-green-600"></strong>
+                            </p>
+                            <div class="bg-white rounded-lg p-4 mb-4 w-full">
+                                <p class="text-sm text-gray-600 mb-2">Please:</p>
+                                <ol class="text-left text-sm text-gray-700 space-y-1">
+                                    <li>1. Check your phone for M-Pesa notification</li>
+                                    <li>2. Enter your M-Pesa PIN</li>
+                                    <li>3. Confirm the payment</li>
+                                </ol>
+                            </div>
+                            <p class="text-xs text-gray-500">
+                                Payment will be automatically processed once confirmed
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Success Message -->
+                <div id="successMessage" class="hidden mt-6">
+                    <div class="bg-green-50 rounded-xl p-6 border-2 border-green-300">
+                        <div class="flex flex-col items-center text-center">
+                            <div class="bg-green-100 rounded-full p-4 mb-4">
+                                <svg class="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-xl font-bold text-gray-900 mb-2">Payment Initiated!</h3>
+                            <p class="text-gray-700 mb-4" id="successText"></p>
+                            <div class="bg-white rounded-lg p-4 w-full">
+                                <p class="text-sm text-gray-600 mb-2">Transaction Details:</p>
+                                <div class="text-left text-sm space-y-1">
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Amount:</span>
+                                        <span class="font-semibold" id="successAmount"></span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="text-gray-600">Platform Fee:</span>
+                                        <span class="font-semibold" id="successFee"></span>
+                                    </div>
+                                    <div class="flex justify-between border-t pt-1 mt-1">
+                                        <span class="text-gray-600">Driver Receives:</span>
+                                        <span class="font-semibold text-green-600" id="successDriverAmount"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <button onclick="location.reload()" class="mt-4 text-blue-600 hover:text-blue-700 font-medium text-sm">
+                                Make Another Payment →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Message -->
+                <div id="errorMessage" class="hidden mt-6">
+                    <div class="bg-red-50 rounded-xl p-6 border-2 border-red-300">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                            </div>
+                            <div class="ml-3 flex-1">
+                                <h3 class="text-sm font-semibold text-red-800 mb-1">Payment Failed</h3>
+                                <p class="text-sm text-red-700" id="errorText"></p>
+                                <button onclick="location.reload()" class="mt-3 text-red-600 hover:text-red-700 font-medium text-sm">
+                                    ← Try Again
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-gray-50 px-6 py-4 border-t border-gray-200">
+                <div class="flex items-center justify-center text-xs text-gray-500">
+                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
+                    </svg>
+                    Secured by IntaSend & GoPay
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const platformFeePercentage = {{ platform_fee_percentage }};
+        
+        // Calculate and display fee breakdown
+        document.getElementById('amount').addEventListener('input', function(e) {
+            const amount = parseFloat(e.target.value) || 0;
+            if (amount > 0) {
+                const fee = (amount * platformFeePercentage / 100).toFixed(2);
+                const driverAmount = (amount - fee).toFixed(2);
+                
+                document.getElementById('displayAmount').textContent = `KES ${amount.toFixed(2)}`;
+                document.getElementById('displayFee').textContent = `KES ${fee}`;
+                document.getElementById('displayDriverAmount').textContent = `KES ${driverAmount}`;
+                document.getElementById('feeBreakdown').classList.remove('hidden');
+            } else {
+                document.getElementById('feeBreakdown').classList.add('hidden');
+            }
+        });
+        
+        // Handle form submission
+        document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const form = e.target;
+            const submitBtn = document.getElementById('submitBtn');
+            const submitBtnText = document.getElementById('submitBtnText');
+            const loadingState = document.getElementById('loadingState');
+            const stkWaitingState = document.getElementById('stkWaitingState');
+            const successMessage = document.getElementById('successMessage');
+            const errorMessage = document.getElementById('errorMessage');
+            const progressBar = document.getElementById('progressBar');
+            
+            // Hide all messages
+            form.classList.add('hidden');
+            loadingState.classList.remove('hidden');
+            stkWaitingState.classList.add('hidden');
+            successMessage.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            
+            // Animate progress bar
+            progressBar.style.width = '30%';
+            
+            try {
+                const amount = parseFloat(document.getElementById('amount').value);
+                const phone = document.getElementById('phone').value;
+                
+                const response = await fetch('/api/pay', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        driver_id: document.getElementById('driverId').value,
+                        amount: amount,
+                        passenger_phone: phone
+                    }),
+                });
+                
+                progressBar.style.width = '70%';
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    progressBar.style.width = '100%';
+                    
+                    // Show STK waiting state
+                    setTimeout(() => {
+                        loadingState.classList.add('hidden');
+                        stkWaitingState.classList.remove('hidden');
+                        document.getElementById('stkPhone').textContent = phone;
+                    }, 500);
+                    
+                    // Show success after delay (simulating webhook processing)
+                    setTimeout(() => {
+                        stkWaitingState.classList.add('hidden');
+                        successMessage.classList.remove('hidden');
+                        document.getElementById('successText').textContent = data.message;
+                        document.getElementById('successAmount').textContent = `KES ${data.amount.toFixed(2)}`;
+                        document.getElementById('successFee').textContent = `KES ${data.platform_fee.toFixed(2)}`;
+                        document.getElementById('successDriverAmount').textContent = `KES ${data.driver_amount.toFixed(2)}`;
+                    }, 3000);
+                    
+                } else {
+                    throw new Error(data.detail || 'Payment failed');
+                }
+            } catch (error) {
+                progressBar.style.width = '0%';
+                loadingState.classList.add('hidden');
+                stkWaitingState.classList.add('hidden');
+                errorMessage.classList.remove('hidden');
+                document.getElementById('errorText').textContent = error.message;
+            }
+        });
+    </script>
+</body>
+</html>
+
+
