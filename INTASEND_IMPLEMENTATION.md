@@ -493,3 +493,6 @@ You've successfully implemented IntaSend integration with automatic payouts!
 **Happy coding! 🚀**
 
 
+
+
+
