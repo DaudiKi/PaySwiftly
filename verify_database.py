@@ -3,6 +3,13 @@ Verify Database Migration Status
 Checks if IntaSend tables and columns exist in Supabase
 """
 import os
+import sys
+import io
+
+# Fix encoding for Windows
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 from dotenv import load_dotenv
 from supabase import create_client
 

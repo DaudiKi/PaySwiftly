@@ -4,6 +4,12 @@ Run this script to verify your production API keys work correctly.
 """
 import os
 import sys
+import io
+
+# Fix encoding for Windows
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+    
 from dotenv import load_dotenv
 import requests
 
