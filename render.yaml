@@ -8,6 +8,22 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.0
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: INTASEND_PUBLISHABLE_KEY
+        sync: false
+      - key: INTASEND_API_TOKEN
+        sync: false
+      - key: INTASEND_WEBHOOK_SECRET
+        sync: false
+      - key: BASE_PUBLIC_URL
+        sync: false
 
   - type: cron
     name: payswiftly-backup
@@ -18,3 +34,18 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.0
+      - key: SUPABASE_URL
+        fromService:
+            type: web
+            name: payswiftly-backend
+            envVarKey: SUPABASE_URL
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        fromService:
+            type: web
+            name: payswiftly-backend
+            envVarKey: SUPABASE_SERVICE_ROLE_KEY
+      - key: DATABASE_URL
+        fromService:
+            type: web
+            name: payswiftly-backend
+            envVarKey: DATABASE_URL
