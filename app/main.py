@@ -7,9 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, HTTPException, Request, BackgroundTasks, Header
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from .models import (
@@ -42,11 +40,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static files
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
-
-# Setup templates
-templates = Jinja2Templates(directory="app/templates")
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global exception: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal Server Error", "error": str(exc)}
+    )
 
 # Initialize IntaSend API and Supabase
 intasend_api = IntaSendAPI()
@@ -124,30 +124,17 @@ async def process_payout(transaction_id: str, driver_id: str, driver_phone: str,
 
 # === API Routes ===
 
-@app.get("/", response_class=HTMLResponse)
+# === API Routes ===
+
+@app.get("/")
 async def root():
     """Root endpoint with API information."""
-    return """
-    <html>
-        <head><title>GoPay - IntaSend Integration</title></head>
-        <body style="font-family: Arial; max-width: 800px; margin: 50px auto; padding: 20px;">
-            <h1>🚗 GoPay Payment Aggregator</h1>
-            <p>QR-based payment collection with automatic driver payouts via IntaSend</p>
-            <h2>API Endpoints:</h2>
-            <ul>
-                <li><code>POST /api/register_driver</code> - Register new driver</li>
-                <li><code>GET /api/driver/{driver_id}</code> - Get driver details</li>
-                <li><code>GET /pay?driver_id={id}&phone={phone}</code> - Payment page</li>
-                <li><code>POST /api/pay</code> - Initiate payment collection</li>
-                <li><code>POST /api/webhooks/intasend</code> - IntaSend webhook handler</li>
-                <li><code>GET /api/transaction/{id}/status</code> - Check transaction status</li>
-                <li><code>GET /driver/{driver_id}/dashboard</code> - Driver dashboard</li>
-                <li><code>GET /admin/dashboard</code> - Admin dashboard</li>
-            </ul>
-            <p><a href="/docs">📚 View API Documentation</a></p>
-        </body>
-    </html>
-    """
+    return {
+        "service": "GoPay IntaSend API",
+        "version": "2.0.0",
+        "docs": "/docs",
+        "redoc": "/redoc"
+    }
 
 
 @app.post("/api/register_driver", response_model=dict)
@@ -202,38 +189,6 @@ async def get_driver(driver_id: str) -> Driver:
     return driver
 
 
-@app.get("/pay", response_class=HTMLResponse)
-async def payment_page(request: Request, driver_id: str, phone: str = None, mode: str = "backend"):
-    """
-    Render payment page for a driver.
-    
-    Passengers access this page by scanning the driver's QR code.
-    The phone parameter can be pre-filled for better UX.
-    
-    Args:
-        mode: "backend" for server-side STK push, "inline" for IntaSend SDK
-    """
-    driver = await supabase_manager.get_driver(driver_id)
-    if not driver:
-        raise HTTPException(status_code=404, detail="Driver not found")
-    
-    # Calculate fee information for display
-    fee_info = intasend_api.calculate_fees(100)  # Example for 100 KES
-    
-    # Choose template based on mode
-    template_name = "pay_inline.html" if mode == "inline" else "pay.html"
-    
-    return templates.TemplateResponse(
-        template_name,
-        {
-            "request": request, 
-            "driver": driver,
-            "passenger_phone": phone,
-            "platform_fee_percentage": fee_info['fee_percentage'],
-            "publishable_key": intasend_api.publishable_key,
-            "is_test_mode": intasend_api.is_test
-        }
-    )
 
 
 @app.post("/api/pay", response_model=PaymentInitiateResponse)
@@ -471,6 +426,7 @@ async def handle_payout_webhook(webhook: IntaSendWebhook):
         logger.error(f"Payout failed for driver {payout.driver_id}")
 
 
+
 @app.get("/api/transaction/{transaction_id}/status", response_model=TransactionStatusResponse)
 async def get_transaction_status(transaction_id: str) -> TransactionStatusResponse:
     """
@@ -493,43 +449,6 @@ async def get_transaction_status(transaction_id: str) -> TransactionStatusRespon
         created_at=transaction.created_at,
         collection_completed_at=transaction.collection_completed_at,
         payout_completed_at=transaction.payout_completed_at
-    )
-
-
-@app.get("/driver/{driver_id}/dashboard", response_class=HTMLResponse)
-async def driver_dashboard(request: Request, driver_id: str):
-    """Render driver dashboard with earnings and transaction history."""
-    driver = await supabase_manager.get_driver(driver_id)
-    if not driver:
-        raise HTTPException(status_code=404, detail="Driver not found")
-    
-    transactions = await supabase_manager.get_driver_transactions(driver_id)
-    payouts = await supabase_manager.get_driver_payouts(driver_id)
-    
-    return templates.TemplateResponse(
-        "driver_dashboard.html",
-        {
-            "request": request,
-            "driver": driver,
-            "transactions": transactions,
-            "payouts": payouts
-        }
-    )
-
-
-@app.get("/admin/dashboard", response_class=HTMLResponse)
-async def admin_dashboard(request: Request):
-    """Render admin dashboard with platform statistics."""
-    stats = await supabase_manager.get_admin_stats()
-    transactions = await supabase_manager.get_all_transactions()
-    
-    return templates.TemplateResponse(
-        "admin_dashboard.html",
-        {
-            "request": request,
-            "stats": stats,
-            "transactions": transactions
-        }
     )
 
 
