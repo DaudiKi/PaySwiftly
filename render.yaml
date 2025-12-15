@@ -8,3 +8,13 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.0
+
+  - type: cron
+    name: payswiftly-backup
+    env: python
+    schedule: "0 0 * * *" # Daily at midnight
+    buildCommand: pip install -r requirements.txt
+    startCommand: python scripts/backup_db.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.0
