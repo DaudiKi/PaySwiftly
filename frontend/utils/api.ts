@@ -21,3 +21,15 @@ export async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): 
 
     return response.json();
 }
+
+export const api = {
+    registerDriver: (data: any) => fetchAPI<any>('/api/register_driver', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    initiatePayment: (driverId: number, data: any) => fetchAPI<any>(`/api/pay/${driverId}`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
+    getDriver: (driverId: string) => fetchAPI<any>(`/api/driver/${driverId}`),
+};
