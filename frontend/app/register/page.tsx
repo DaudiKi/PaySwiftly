@@ -36,8 +36,8 @@ export default function Register() {
                 vehicle_number: formData.vehicleNumber
             })
 
-            // Redirect to the driver's payment page on success
-            router.push(`/pay/${response.driver_id}`)
+            // Redirect to the driver's dashboard on success
+            router.push(`/dashboard/${response.driver_id}`)
         } catch (err: any) {
             setError(err.message || 'Registration failed. Please try again.')
         } finally {
