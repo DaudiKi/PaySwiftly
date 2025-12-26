@@ -29,14 +29,15 @@ export async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): 
     return response.json();
 }
 
-registerDriver: (data: any) => fetchAPI<any>('/api/register_driver', {
-    method: 'POST',
-    body: JSON.stringify(data),
-}),
+export const api = {
+    registerDriver: (data: any) => fetchAPI<any>('/api/register_driver', {
+        method: 'POST',
+        body: JSON.stringify(data),
+    }),
     initiatePayment: (data: any) => fetchAPI<any>('/api/pay', {
         method: 'POST',
         body: JSON.stringify(data),
     }),
-        getDriver: (driverId: string) => fetchAPI<any>(`/api/driver/${driverId}`),
-            getDriverTransactions: (driverId: string) => fetchAPI<any[]>(`/api/driver/${driverId}/transactions`),
+    getDriver: (driverId: string) => fetchAPI<any>(`/api/driver/${driverId}`),
+    getDriverTransactions: (driverId: string) => fetchAPI<any[]>(`/api/driver/${driverId}/transactions`),
 };
