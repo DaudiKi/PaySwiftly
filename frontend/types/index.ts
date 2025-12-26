@@ -7,6 +7,8 @@ export interface Driver {
     vehicle_type: string;
     vehicle_number: string;
     qr_code_url: string | null;
+    balance: number;
+    total_earnings: number;
 }
 
 export interface PaymentInitiateResponse {
