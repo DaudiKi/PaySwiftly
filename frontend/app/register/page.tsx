@@ -11,12 +11,14 @@ export default function Register() {
         firstName: '',
         lastName: '',
         email: '',
-        phone: ''
+        phone: '',
+        vehicleType: 'boda',
+        vehicleNumber: ''
     })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         setFormData({ ...formData, [e.target.name]: e.target.value })
     }
 
@@ -27,10 +29,11 @@ export default function Register() {
 
         try {
             const response = await api.registerDriver({
-                first_name: formData.firstName,
-                last_name: formData.lastName,
+                name: `${formData.firstName} ${formData.lastName}`.trim(),
+                phone: formData.phone,
                 email: formData.email,
-                phone_number: formData.phone
+                vehicle_type: formData.vehicleType,
+                vehicle_number: formData.vehicleNumber
             })
 
             // Redirect to the driver's payment page on success
@@ -116,6 +119,35 @@ export default function Register() {
                             onChange={handleChange}
                         />
                         <p className="text-xs text-gray-500">Format: 254712345678</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-300">Vehicle Type</label>
+                            <select
+                                name="vehicleType"
+                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all hover:bg-white/10 [&>option]:text-black"
+                                value={formData.vehicleType}
+                                onChange={handleChange}
+                            >
+                                <option value="boda">Boda Boda</option>
+                                <option value="taxi">Taxi</option>
+                                <option value="uber">Uber</option>
+                                <option value="bolt">Bolt</option>
+                            </select>
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-300">Number Plate</label>
+                            <input
+                                type="text"
+                                name="vehicleNumber"
+                                required
+                                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all hover:bg-white/10"
+                                placeholder="KAAA 123B"
+                                value={formData.vehicleNumber}
+                                onChange={handleChange}
+                            />
+                        </div>
                     </div>
 
                     <button
