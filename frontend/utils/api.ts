@@ -16,7 +16,14 @@ export async function fetchAPI<T>(endpoint: string, options: RequestInit = {}): 
 
     if (!response.ok) {
         const error = await response.json().catch(() => ({ detail: 'Network error' }));
-        throw new Error(error.detail || `Error ${response.status}`);
+        let errorMessage = error.detail || `Error ${response.status}`;
+
+        // Handle Pydantic validation errors (array of objects)
+        if (Array.isArray(errorMessage)) {
+            errorMessage = errorMessage.map((e: any) => e.msg).join(', ');
+        }
+
+        throw new Error(errorMessage);
     }
 
     return response.json();
