@@ -22,10 +22,10 @@ def generate_payment_qr(driver_id: str, passenger_phone: str = None) -> bytes:
     # Remove any trailing slashes
     base_url = base_url.rstrip('/')
     
-    # Generate payment URL
-    payment_url = f"{base_url}/pay?driver_id={driver_id}"
+    # Generate payment URL (Next.js route: /pay/[driver_id])
+    payment_url = f"{base_url}/pay/{driver_id}"
     if passenger_phone:
-        payment_url += f"&phone={passenger_phone}"
+        payment_url += f"?phone={passenger_phone}"
     
     # Create QR code instance
     qr = qrcode.QRCode(
