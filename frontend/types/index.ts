@@ -26,3 +26,12 @@ export interface FeeInfo {
     publishable_key: string;
     is_test_mode: boolean;
 }
+
+export interface TransactionStatusResponse {
+    transaction_id: string;
+    status: string;
+    collection_status: string;
+    payout_status: string;
+    message?: string;
+    amount_paid: number;
+}

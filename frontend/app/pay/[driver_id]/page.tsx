@@ -53,14 +53,87 @@ export default function PaymentPage({ params }: { params: Promise<{ driver_id: s
     if (loading) return <div className="flex h-screen items-center justify-center text-brand-primary">Loading...</div>;
     if (!driver) return <div className="flex h-screen items-center justify-center text-red-500">Driver not found</div>;
 
+    const [pollStatus, setPollStatus] = useState<string>('pending'); // pending, completed, failed
+
+    // Poll for transaction status
+    useEffect(() => {
+        if (!success?.transaction_id) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const statusData = await fetchAPI<any>(`/api/transaction/${success.transaction_id}/status`);
+
+                if (statusData.collection_status === 'completed') {
+                    setPollStatus('completed');
+                    clearInterval(interval);
+                } else if (statusData.collection_status === 'failed') {
+                    setPollStatus('failed');
+                    clearInterval(interval);
+                }
+            } catch (e) {
+                console.error("Polling error", e);
+            }
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [success]);
+
     if (success) {
+        if (pollStatus === 'failed') {
+            return (
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                    <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6 border border-red-100">
+                        <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto text-red-600 text-4xl">
+                            ✕
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800">Payment Failed</h2>
+                        <p className="text-gray-600">
+                            The request was not completed or timed out.
+                        </p>
+                        <button
+                            onClick={() => { setSuccess(null); setPollStatus('pending'); }}
+                            className="w-full bg-brand-primary text-white font-bold py-3 rounded-xl hover:bg-brand-primary/90 transition-all"
+                        >
+                            Try Again
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
+        if (pollStatus === 'completed') {
+            return (
+                <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+                    <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
+                        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600 text-4xl">
+                            ✓
+                        </div>
+                        <h2 className="text-2xl font-bold text-gray-800">Payment Successful!</h2>
+                        <p className="text-gray-600">
+                            Thank you for paying. Your driver has been notified that the payment of
+                            <span className="font-bold text-gray-900"> KES {amount}</span> is complete.
+                        </p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="w-full bg-gray-100 text-gray-700 font-bold py-3 rounded-xl hover:bg-gray-200 transition-all"
+                        >
+                            Make Another Payment
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6">
-                    <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto text-green-600 text-4xl">
-                        ✓
+                <div className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center space-y-6 relative overflow-hidden">
+                    {/* Pulsing visual */}
+                    <div className="absolute top-0 left-0 w-full h-1 bg-brand-accent animate-pulse"></div>
+
+                    <div className="w-20 h-20 bg-yellow-50 rounded-full flex items-center justify-center mx-auto text-yellow-600 text-4xl animate-bounce">
+                        ⏳
                     </div>
-                    <h2 className="text-2xl font-bold text-gray-800">Request Sent!</h2>
+                    <h2 className="text-2xl font-bold text-gray-800">Check Your Phone</h2>
                     <p className="text-gray-600">
                         Please check your phone <strong>{phone}</strong> and enter your M-Pesa PIN to complete the payment of
                         <span className="font-bold text-gray-900"> KES {amount}</span>.
