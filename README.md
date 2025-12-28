@@ -1,319 +1,246 @@
-# GoPay Payment Aggregator
+# PaySwiftly - Modern Payment Platform for Drivers
 
-A modern payment aggregator system for boda riders and Uber/Bolt drivers with **automatic driver payouts via IntaSend**.
+A production-ready payment aggregator system for boda riders and ride-hailing drivers with automatic M-Pesa integration and instant payouts.
 
-## 🎉 IntaSend Integration Complete!
+## 🚀 Live Deployment
 
-✅ **Your IntaSend account is verified!** GoPay now features:
-- 💳 **Automatic Payment Collection** via M-Pesa STK Push
-- 💰 **Instant Driver Payouts** - Drivers paid within minutes
-- 🔄 **Automatic Fee Splitting** - Platform commission handled automatically
-- 📊 **Real-time Webhooks** - Instant payment notifications
+- **Frontend**: [https://pay-swiftly.vercel.app](https://pay-swiftly.vercel.app)
+- **Backend API**: `https://payswiftly-backend.onrender.com`
+- **Status**: ✅ Production Ready
 
-### 🚀 Ready to Deploy?
+## ✨ Features
 
-**Quick Start (40 minutes):**
-```bash
-# 1. Get production keys from IntaSend Dashboard
-# 2. Configure environment
-cp env.production.example .env.production
+- 🚗 **Driver Registration** - Easy onboarding with automatic QR code generation
+- 💳 **M-Pesa STK Push** - Seamless mobile money payments via IntaSend
+- 💰 **Instant Payouts** - Automatic driver payouts within minutes
+- 📊 **Real-time Dashboards** - Driver earnings and transaction tracking
+- 📱 **Mobile-First Design** - Premium glassmorphism UI
+- 🔒 **Secure** - Row Level Security (RLS) with Supabase
+- 📈 **Transaction History** - Complete payment tracking and analytics
 
-# 3. Test connection
-python test_production_api.py
+## 🏗️ Architecture
 
-# 4. Deploy
-railway up  # or: git push heroku master
-```
+### Tech Stack
 
-**📚 Full Guides:**
-- [`START_PRODUCTION.md`](START_PRODUCTION.md) - Start here!
-- [`QUICK_PRODUCTION_DEPLOY.md`](QUICK_PRODUCTION_DEPLOY.md) - 40-minute deployment
-- [`PRODUCTION_SETUP.md`](PRODUCTION_SETUP.md) - Detailed guide
-- [`PRODUCTION_CHECKLIST.md`](PRODUCTION_CHECKLIST.md) - Step-by-step checklist
+**Frontend (Next.js 16 + Vercel)**
+- Framework: Next.js 16 with App Router
+- Styling: TailwindCSS with custom design system
+- Deployment: Vercel (auto-deploy from `main` branch)
 
----
+**Backend (FastAPI + Render)**
+- Framework: FastAPI (Python async)
+- Database: Supabase (PostgreSQL)
+- Storage: Supabase Storage (QR codes)
+- Payment: IntaSend (M-Pesa integration)
+- Deployment: Render (auto-deploy from `main` branch)
 
-## Features
-
-- 🚗 **Driver Registration**: Easy onboarding with QR code generation
-- 💳 **M-Pesa Integration**: Seamless mobile money payments
-- 📊 **Real-time Dashboards**: For both drivers and administrators
-- 📱 **Responsive UI**: Works on all devices
-- 🔒 **Secure Transactions**: Built with security best practices
-- 📈 **Transaction Tracking**: Complete payment history and analytics
-
-## Tech Stack
-
-- **Backend**: FastAPI (Python async web framework)
-- **Database**: Supabase (PostgreSQL)
-- **Storage**: Supabase Storage (for QR codes)
-- **Payment Gateway**: IntaSend (M-Pesa STK Push & Payouts)
-- **Frontend**: HTML + TailwindCSS + Vanilla JS
-- **QR Codes**: qrcode[pil]
-
-### Why IntaSend?
-
-- ✅ Single API for collections AND payouts
-- ✅ Automatic webhook notifications
-- ✅ No manual payout approval needed
-- ✅ Production-ready with KYC verification
-- ✅ Comprehensive dashboard and reporting
-
-## Project Structure
+### Project Structure
 
 ```
-gopay/
-├── app/
-│   ├── __init__.py
-│   ├── main.py              # FastAPI application and routes
-│   ├── models.py            # Pydantic models
-│   ├── supabase_util.py     # Supabase integration
-│   ├── mpesa.py            # M-Pesa API integration
-│   ├── qr_utils.py         # QR code generation
-│   ├── templates/          # HTML templates
-│   │   ├── pay.html
-│   │   ├── driver_dashboard.html
-│   │   └── admin_dashboard.html
-│   └── static/
-│       └── styles.css      # Custom styles
-├── database/
-│   ├── schema.sql          # PostgreSQL database schema
-│   └── migrate.py          # Migration script
-├── requirements.txt        # Python dependencies
-├── env.example            # Environment variables template
-├── SUPABASE_SETUP.md      # Supabase setup guide
-└── run.sh                # Startup script
+PaySwiftly/
+├── frontend/                 # Next.js application
+│   ├── app/
+│   │   ├── page.tsx         # Landing page
+│   │   ├── register/        # Driver registration
+│   │   ├── login/           # Driver login
+│   │   ├── dashboard/       # Driver dashboard
+│   │   └── pay/             # Payment page (QR scan)
+│   ├── utils/api.ts         # API client
+│   └── types/index.ts       # TypeScript definitions
+├── app/                     # FastAPI backend
+│   ├── main.py             # API routes
+│   ├── models.py           # Pydantic models
+│   ├── supabase_util.py    # Database operations
+│   ├── intasend.py         # Payment integration
+│   └── qr_utils.py         # QR code generation
+├── scripts/
+│   └── backup_db.py        # Daily database backup
+└── render.yaml             # Render deployment config
 ```
 
-## Database Schema
-
-### PostgreSQL Tables
-
-1. **drivers**
-   ```sql
-   CREATE TABLE drivers (
-       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-       name VARCHAR(255) NOT NULL,
-       phone VARCHAR(20) NOT NULL UNIQUE,
-       email VARCHAR(255) NOT NULL UNIQUE,
-       vehicle_type vehicle_type NOT NULL,
-       vehicle_number VARCHAR(50) NOT NULL,
-       qr_code_url TEXT,
-       balance DECIMAL(10,2) DEFAULT 0.00,
-       total_earnings DECIMAL(10,2) DEFAULT 0.00,
-       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-   );
-   ```
-
-2. **transactions**
-   ```sql
-   CREATE TABLE transactions (
-       id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-       driver_id UUID NOT NULL REFERENCES drivers(id),
-       passenger_phone VARCHAR(20) NOT NULL,
-       amount_paid DECIMAL(10,2) NOT NULL,
-       platform_fee DECIMAL(10,2) NOT NULL,
-       driver_amount DECIMAL(10,2) NOT NULL,
-       status transaction_status DEFAULT 'pending',
-       mpesa_receipt VARCHAR(100),
-       checkout_request_id VARCHAR(100),
-       created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-   );
-   ```
-
-3. **admin_stats**
-   ```sql
-   CREATE TABLE admin_stats (
-       id VARCHAR(50) PRIMARY KEY DEFAULT 'revenue',
-       total_transactions INTEGER DEFAULT 0,
-       total_revenue DECIMAL(15,2) DEFAULT 0.00,
-       total_platform_fees DECIMAL(15,2) DEFAULT 0.00,
-       active_drivers INTEGER DEFAULT 0,
-       updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-   );
-   ```
-
-## Setup Instructions
+## 🚦 Getting Started
 
 ### Prerequisites
 
-1. Python 3.8+
-2. Supabase account
-3. M-Pesa Daraja API account
+- Node.js 18+ (for frontend)
+- Python 3.11+ (for backend)
+- Supabase account
+- IntaSend account (with KYC verification for live mode)
 
-### Supabase Setup
+### Local Development
 
-1. Create a new Supabase project at [supabase.com](https://supabase.com)
-2. Get your project URL and API key from Settings → API
-3. Run the database schema from `database/schema.sql` in the SQL Editor
-4. Create a storage bucket named `qr-codes` and make it public
+#### Backend Setup
 
-### M-Pesa Sandbox Setup
-
-1. Create a Safaricom Developer Account
-2. Create a new app to get your credentials
-3. Configure your app settings
-4. Note down your:
-   - Consumer Key
-   - Consumer Secret
-   - Shortcode
-   - Passkey
-
-### Local Development Setup
-
-1. Clone the repository:
+1. **Clone and install dependencies:**
    ```bash
-   git clone <repository-url>
-   cd mpesa-aggregator
-   ```
-
-2. Create and activate a virtual environment:
-   ```bash
+   cd PaySwiftly
    python -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # or
-   .\venv\Scripts\activate  # Windows
-   ```
-
-3. Install dependencies:
-   ```bash
+   source venv/bin/activate  # Windows: .\venv\Scripts\activate
    pip install -r requirements.txt
    ```
 
-4. Copy `env.example` to `.env` and configure:
+2. **Configure environment variables:**
+   Create `.env` file:
+   ```env
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+   INTASEND_API_KEY=your_api_key
+   INTASEND_PUBLISHABLE_KEY=your_publishable_key
+   INTASEND_TEST_MODE=true
+   BASE_PUBLIC_URL=http://localhost:3000
+   ```
+
+3. **Run the backend:**
    ```bash
-   cp env.example .env
+   uvicorn app.main:app --reload --port 8000
    ```
 
-5. Configure your environment variables in `.env`:
-   ```
-   # Supabase Configuration
-   SUPABASE_URL=your_supabase_project_url
-   SUPABASE_ANON_KEY=your_supabase_anon_key
-   
-   # M-Pesa Configuration
-   DARAJA_BASE_URL=https://sandbox.safaricom.co.ke
-   DARAJA_CONSUMER_KEY=your-consumer-key
-   DARAJA_CONSUMER_SECRET=your-consumer-secret
-   DARAJA_SHORT_CODE=174379
-   DARAJA_PASSKEY=your-passkey
-   DARAJA_CALLBACK_URL=http://localhost:8000/api/mpesa/callback
-   DARAJA_ACCOUNT_REF=GoPay
-   DARAJA_TRANSACTION_DESC=Payment for ride
-   ```
+#### Frontend Setup
 
-6. Run the application:
+1. **Install dependencies:**
    ```bash
-   ./run.sh
+   cd frontend
+   npm install
    ```
 
-   The application will be available at `http://localhost:8000`
+2. **Configure environment:**
+   Create `.env.local`:
+   ```env
+   NEXT_PUBLIC_API_URL=http://localhost:8000
+   ```
 
-## Deployment
-
-### Production Deployment Checklist
-
-1. **Environment Configuration**
-   - Set up production environment variables
-   - Configure production Supabase project
-   - Set up production M-Pesa credentials
-
-2. **Security Measures**
-   - Enable HTTPS
-   - Set up CORS properly
-   - Configure rate limiting
-   - Implement request validation
-   - Set up proper logging
-
-3. **Performance Optimization**
-   - Enable caching where appropriate
-   - Optimize database queries
-   - Configure proper connection pooling
-
-### Deployment Options
-
-1. **Docker Deployment**
+3. **Run the frontend:**
    ```bash
-   # Build the image
-   docker build -t gopay-aggregator .
-   
-   # Run the container
-   docker run -p 8000:8000 gopay-aggregator
+   npm run dev
    ```
 
-2. **Cloud Platform Deployment**
-   - Deploy to Google Cloud Run
-   - Deploy to Heroku
-   - Deploy to AWS ECS
+Visit `http://localhost:3000` to see the app.
 
-## Security Checklist
+## 🌐 Deployment
 
-- [x] Secure environment variables
-- [x] Supabase Row Level Security (RLS)
-- [x] Input validation
-- [x] CORS configuration
-- [x] Rate limiting
-- [x] Error handling
-- [x] Audit logging
-- [x] Data encryption
-- [x] Authentication
-- [x] Authorization
+### Backend (Render)
 
-## Troubleshooting
+The backend auto-deploys when you push to `main` branch.
 
-### Common Issues
+**Required Environment Variables:**
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
+- `INTASEND_API_KEY`
+- `INTASEND_PUBLISHABLE_KEY`
+- `INTASEND_TEST_MODE` (set to `false` for production)
+- `BASE_PUBLIC_URL` (your Vercel frontend URL)
 
-1. **Supabase Connection Issues**
-   - Verify SUPABASE_URL and SUPABASE_ANON_KEY
-   - Check Supabase project settings
-   - Verify environment variables
+### Frontend (Vercel)
 
-2. **M-Pesa API Issues**
-   - Verify API credentials
-   - Check callback URL configuration
-   - Verify transaction parameters
+The frontend auto-deploys when you push to `main` branch.
 
-3. **QR Code Generation Issues**
-   - Check storage permissions
-   - Verify Supabase Storage configuration
-   - Check file upload settings
+**Required Environment Variable:**
+- `NEXT_PUBLIC_API_URL` (your Render backend URL)
 
-### Debug Mode
+## 📊 Database Schema
 
-Enable debug mode by setting:
-```python
-app = FastAPI(debug=True)
-```
+### Tables
 
-### Logging
+**drivers**
+- `id` (UUID, primary key)
+- `name`, `phone`, `email`
+- `vehicle_type`, `vehicle_number`
+- `qr_code_url`
+- `balance`, `total_earnings`
 
-The application uses Python's built-in logging module. To enable detailed logging:
+**transactions**
+- `id` (UUID, primary key)
+- `driver_id` (references drivers)
+- `passenger_phone`
+- `amount_paid`, `platform_fee`, `driver_amount`
+- `status`, `collection_status`, `payout_status`
+- `collection_id`, `tracking_id`
 
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
-```
+**payouts**
+- `id` (UUID, primary key)
+- `transaction_id`, `driver_id`
+- `amount`, `status`
+- `tracking_id`
 
-## Contributing
+## 🔧 Configuration
+
+### IntaSend Setup
+
+1. **Create Account**: Sign up at [intasend.com](https://intasend.com)
+2. **KYC Verification**: Complete verification for live mode
+3. **Get API Keys**: Settings → API Keys
+4. **Configure Webhook**: `https://your-backend.onrender.com/api/webhooks/intasend`
+
+### Supabase Setup
+
+1. **Create Project**: [supabase.com](https://supabase.com)
+2. **Run Schema**: Execute `database/schema.sql` in SQL Editor
+3. **Create Storage Bucket**: Name it `qr-codes` and make it public
+4. **Enable RLS**: Apply policies from `SUPABASE_IMPROVEMENTS.md`
+
+## 🔐 Security
+
+- ✅ HTTPS enforced on all endpoints
+- ✅ Row Level Security (RLS) on Supabase
+- ✅ Environment variables for secrets
+- ✅ CORS configured for frontend domain
+- ✅ Webhook signature verification
+- ✅ Input validation with Pydantic
+
+## 🐛 Troubleshooting
+
+### Payment Failures
+
+**"No response from user"**
+- **Cause**: User didn't enter PIN within timeout (~60s) or poor network
+- **Solution**: Ensure strong cellular signal, retry payment
+
+**Webhook not firing**
+- **Cause**: Incorrect webhook URL in IntaSend
+- **Solution**: Verify webhook URL in IntaSend dashboard
+
+### Deployment Issues
+
+**Vercel build fails**
+- Check TypeScript errors in build logs
+- Verify all environment variables are set
+
+**Render deployment fails**
+- Check Python version (must be 3.11.9)
+- Verify all dependencies in `requirements.txt`
+
+## 📝 API Endpoints
+
+### Public Endpoints
+
+- `POST /api/register_driver` - Register new driver
+- `GET /api/driver/{driver_id}` - Get driver details
+- `POST /api/pay` - Initiate payment
+- `GET /api/transaction/{id}/status` - Check payment status
+
+### Webhook Endpoints
+
+- `POST /api/webhooks/intasend` - IntaSend payment notifications
+
+## 🤝 Contributing
 
 1. Fork the repository
-2. Create your feature branch
-3. Commit your changes
-4. Push to the branch
-5. Create a new Pull Request
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## License
+## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
-## Support
+## 🆘 Support
 
-For support, please open an issue in the repository or contact the development team.
+For issues or questions:
+- Open an issue on GitHub
+- Check the [Payment Diagnostic Guide](C:\Users\daudi\.gemini\antigravity\brain\e340ab04-a229-4a3c-a868-290e5e1d833c/payment_diagnostic.md)
+- Review the [Deployment Guide](C:\Users\daudi\.gemini\antigravity\brain\e340ab04-a229-4a3c-a868-290e5e1d833c/DEPLOYMENT_GUIDE.md)
 
+---
 
-
-
-
-
+**Built with ❤️ for the driver community**
