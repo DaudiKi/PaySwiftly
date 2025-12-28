@@ -18,6 +18,7 @@ export default function PaymentPage({ params }: { params: Promise<{ driver_id: s
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState<PaymentInitiateResponse | null>(null);
+    const [pollStatus, setPollStatus] = useState<string>('pending');
 
     useEffect(() => {
         fetchAPI<Driver>(`/api/driver/${driverId}`)
@@ -25,6 +26,29 @@ export default function PaymentPage({ params }: { params: Promise<{ driver_id: s
             .catch((err) => setError(err.message))
             .finally(() => setLoading(false));
     }, [driverId]);
+
+    // Poll for transaction status
+    useEffect(() => {
+        if (!success?.transaction_id) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const statusData = await fetchAPI<any>(`/api/transaction/${success.transaction_id}/status`);
+
+                if (statusData.collection_status === 'completed') {
+                    setPollStatus('completed');
+                    clearInterval(interval);
+                } else if (statusData.collection_status === 'failed') {
+                    setPollStatus('failed');
+                    clearInterval(interval);
+                }
+            } catch (e) {
+                console.error("Polling error", e);
+            }
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [success]);
 
     const handlePayment = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -52,31 +76,6 @@ export default function PaymentPage({ params }: { params: Promise<{ driver_id: s
 
     if (loading) return <div className="flex h-screen items-center justify-center text-brand-primary">Loading...</div>;
     if (!driver) return <div className="flex h-screen items-center justify-center text-red-500">Driver not found</div>;
-
-    const [pollStatus, setPollStatus] = useState<string>('pending'); // pending, completed, failed
-
-    // Poll for transaction status
-    useEffect(() => {
-        if (!success?.transaction_id) return;
-
-        const interval = setInterval(async () => {
-            try {
-                const statusData = await fetchAPI<any>(`/api/transaction/${success.transaction_id}/status`);
-
-                if (statusData.collection_status === 'completed') {
-                    setPollStatus('completed');
-                    clearInterval(interval);
-                } else if (statusData.collection_status === 'failed') {
-                    setPollStatus('failed');
-                    clearInterval(interval);
-                }
-            } catch (e) {
-                console.error("Polling error", e);
-            }
-        }, 3000);
-
-        return () => clearInterval(interval);
-    }, [success]);
 
     if (success) {
         if (pollStatus === 'failed') {
