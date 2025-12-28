@@ -13,7 +13,9 @@ export default function Register() {
         email: '',
         phone: '',
         vehicleType: 'boda',
-        vehicleNumber: ''
+        vehicleNumber: '',
+        password: '',
+        confirmPassword: ''
     })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
@@ -28,12 +30,26 @@ export default function Register() {
         setError('')
 
         try {
+            // Validate passwords match
+            if (formData.password !== formData.confirmPassword) {
+                setError('Passwords do not match')
+                setLoading(false)
+                return
+            }
+
+            if (formData.password.length < 8) {
+                setError('Password must be at least 8 characters')
+                setLoading(false)
+                return
+            }
+
             const response = await api.registerDriver({
                 name: `${formData.firstName} ${formData.lastName}`.trim(),
                 phone: formData.phone,
                 email: formData.email,
                 vehicle_type: formData.vehicleType,
-                vehicle_number: formData.vehicleNumber
+                vehicle_number: formData.vehicleNumber,
+                password: formData.password
             })
 
             // Redirect to the driver's dashboard on success
@@ -148,6 +164,34 @@ export default function Register() {
                                 onChange={handleChange}
                             />
                         </div>
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-300">Password</label>
+                        <input
+                            type="password"
+                            name="password"
+                            required
+                            minLength={8}
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all hover:bg-white/10"
+                            placeholder="Minimum 8 characters"
+                            value={formData.password}
+                            onChange={handleChange}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-300">Confirm Password</label>
+                        <input
+                            type="password"
+                            name="confirmPassword"
+                            required
+                            minLength={8}
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all hover:bg-white/10"
+                            placeholder="Re-enter password"
+                            value={formData.confirmPassword}
+                            onChange={handleChange}
+                        />
                     </div>
 
                     <button

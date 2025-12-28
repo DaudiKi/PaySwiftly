@@ -105,6 +105,17 @@ class DriverRegistration(BaseModel):
     email: EmailStr
     vehicle_type: VehicleType
     vehicle_number: str
+    password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
+
+class DriverLogin(BaseModel):
+    phone: str
+    password: str
+
+class LoginResponse(BaseModel):
+    status: str
+    driver_id: str
+    token: str
+    message: str
 
 class PaymentRequest(BaseModel):
     driver_id: str

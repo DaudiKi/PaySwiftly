@@ -14,11 +14,12 @@ from .models import (
     Driver, Transaction, AdminStats, 
     DriverRegistration, PaymentRequest, PaymentInitiateResponse,
     IntaSendWebhook, TransactionStatusResponse, TransactionStatus,
-    Payout, PayoutStatus, PlatformFee
+    Payout, PayoutStatus, PlatformFee, DriverLogin, LoginResponse
 )
 from .supabase_util import SupabaseManager
 from .intasend import IntaSendAPI
 from .qr_utils import generate_payment_qr
+from .auth import hash_password, verify_password, create_access_token
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -156,9 +157,15 @@ async def register_driver(driver_data: DriverRegistration) -> dict:
             vehicle_number=driver_data.vehicle_number
         )
         
+        # Hash the password
+        password_hash = hash_password(driver_data.password)
+        
         # Save driver to Supabase
         driver_id = await supabase_manager.create_driver(driver)
         logger.info(f"Driver registered: {driver_id}")
+        
+        # Update driver with password hash
+        await supabase_manager.update_driver(driver_id, {"password_hash": password_hash})
         
         # Generate QR code with driver's phone pre-filled
         qr_bytes = generate_payment_qr(driver_id, driver_data.phone)
@@ -177,6 +184,44 @@ async def register_driver(driver_data: DriverRegistration) -> dict:
         }
     except Exception as e:
         logger.error(f"Driver registration failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/login", response_model=LoginResponse)
+async def login_driver(login_data: DriverLogin) -> LoginResponse:
+    """
+    Authenticate driver with phone and password.
+    Returns JWT token on successful authentication.
+    """
+    try:
+        # Get driver by phone
+        driver_data = await supabase_manager.get_driver_by_phone(login_data.phone)
+        
+        if not driver_data:
+            raise HTTPException(status_code=401, detail="Invalid phone number or password")
+        
+        # Verify password
+        if not driver_data.get('password_hash'):
+            raise HTTPException(status_code=401, detail="Please register with a password")
+        
+        if not verify_password(login_data.password, driver_data['password_hash']):
+            raise HTTPException(status_code=401, detail="Invalid phone number or password")
+        
+        # Create JWT token
+        token = create_access_token(data={"sub": driver_data['id']})
+        
+        logger.info(f"Driver logged in: {driver_data['id']}")
+        
+        return LoginResponse(
+            status="success",
+            driver_id=driver_data['id'],
+            token=token,
+            message="Login successful"
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Login failed: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

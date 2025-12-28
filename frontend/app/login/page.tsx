@@ -3,13 +3,20 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { api } from '@/utils/api'
+import { fetchAPI } from '@/utils/api'
 
 export default function Login() {
     const router = useRouter()
-    const [driverId, setDriverId] = useState('')
+    const [formData, setFormData] = useState({
+        phone: '',
+        password: ''
+    })
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState('')
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setFormData({ ...formData, [e.target.name]: e.target.value })
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -17,14 +24,18 @@ export default function Login() {
         setError('')
 
         try {
-            // In a real app, we would authenticate with password/OTP.
-            // For this MVP, we verify the Driver ID exists by fetching their profile.
-            await api.getDriver(driverId.trim())
+            const response = await fetchAPI<any>('/api/login', {
+                method: 'POST',
+                body: JSON.stringify(formData)
+            })
 
-            // If success, redirect to dashboard/payment page
-            router.push(`/pay/${driverId.trim()}`)
+            // Store token in localStorage
+            localStorage.setItem('auth_token', response.token)
+
+            // Redirect to dashboard
+            router.push(`/dashboard/${response.driver_id}`)
         } catch (err: any) {
-            setError('Driver ID not found. Please check and try again.')
+            setError(err.message || 'Login failed. Please check your credentials.')
         } finally {
             setLoading(false)
         }
@@ -42,7 +53,7 @@ export default function Login() {
                         PaySwiftly
                     </Link>
                     <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-                    <p className="text-gray-400">Enter your Driver ID to continue.</p>
+                    <p className="text-gray-400">Sign in to access your dashboard.</p>
                 </div>
 
                 {error && (
@@ -53,14 +64,28 @@ export default function Login() {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-300">Driver ID</label>
+                        <label className="text-sm font-medium text-gray-300">Phone Number</label>
                         <input
-                            type="text"
+                            type="tel"
+                            name="phone"
                             required
                             className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all hover:bg-white/10"
-                            placeholder="e.g. 550e8400-..."
-                            value={driverId}
-                            onChange={(e) => setDriverId(e.target.value)}
+                            placeholder="2547..."
+                            value={formData.phone}
+                            onChange={handleChange}
+                        />
+                    </div>
+
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium text-gray-300">Password</label>
+                        <input
+                            type="password"
+                            name="password"
+                            required
+                            className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 transition-all hover:bg-white/10"
+                            placeholder="Enter your password"
+                            value={formData.password}
+                            onChange={handleChange}
                         />
                     </div>
 
@@ -75,7 +100,7 @@ export default function Login() {
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                 </svg>
-                                Verifying...
+                                Signing In...
                             </span>
                         ) : (
                             'Sign In'

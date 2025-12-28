@@ -40,6 +40,14 @@ class SupabaseManager:
             return Driver(**driver_data)
         return None
 
+    async def get_driver_by_phone(self, phone: str) -> Optional[Dict[str, Any]]:
+        """Get driver by phone number (for login). Returns raw dict including password_hash."""
+        result = self.supabase.table('drivers').select('*').eq('phone', phone).execute()
+        
+        if result.data:
+            return result.data[0]
+        return None
+
     async def update_driver(self, driver_id: str, data: Dict[str, Any]) -> bool:
         """Update driver details."""
         data['updated_at'] = datetime.utcnow().isoformat()
