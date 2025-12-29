@@ -122,7 +122,7 @@ export default function Auth() {
                             required
                         />
                         <a href="#" className="text-sm text-blue-600 hover:text-blue-800 font-semibold mb-8 transition-colors">Forgot password?</a>
-                        <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white w-full py-4 rounded-2xl font-bold text-lg shadow-[0_10px_20px_rgba(37,99,235,0.3)] hover:shadow-[0_15px_25px_rgba(37,99,235,0.4)] hover:-translate-y-0.5 transition-all active:scale-[0.98]">
+                        <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white w-full py-4 rounded-2xl font-bold text-lg shadow-[0_10px_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] hover:ring-4 hover:ring-blue-400/30 hover:-translate-y-0.5 transition-all active:scale-[0.98]">
                             {loading ? 'Signing In...' : 'Sign In'}
                         </button>
                     </form>
@@ -155,7 +155,7 @@ export default function Auth() {
                         <input type="password" placeholder="Create Password" value={registerData.password} onChange={e => setRegisterData({ ...registerData, password: e.target.value })} className="bg-white/40 border border-white/60 w-full p-4 rounded-2xl mb-3 outline-none text-sm backdrop-blur-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] focus:ring-2 focus:ring-blue-500/50" required />
                         <input type="password" placeholder="Confirm Password" value={registerData.confirmPassword} onChange={e => setRegisterData({ ...registerData, confirmPassword: e.target.value })} className="bg-white/40 border border-white/60 w-full p-4 rounded-2xl mb-6 outline-none text-sm backdrop-blur-sm shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] focus:ring-2 focus:ring-blue-500/50" required />
 
-                        <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white w-full py-4 rounded-2xl font-bold text-lg shadow-[0_10px_20px_rgba(37,99,235,0.3)] hover:shadow-[0_15px_25px_rgba(37,99,235,0.4)] hover:-translate-y-0.5 transition-all active:scale-[0.98]">
+                        <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white w-full py-4 rounded-2xl font-bold text-lg shadow-[0_10px_20px_rgba(37,99,235,0.3)] hover:shadow-[0_0_30px_rgba(37,99,235,0.6)] hover:ring-4 hover:ring-blue-400/30 hover:-translate-y-0.5 transition-all active:scale-[0.98]">
                             {loading ? 'Creating...' : 'Create Account'}
                         </button>
                     </form>
@@ -182,7 +182,7 @@ export default function Auth() {
                             </p>
                             <button
                                 onClick={() => setIsLogin(true)}
-                                className="px-10 py-3 rounded-2xl font-bold text-blue-600 bg-white/80 backdrop-blur-md border border-white shadow-lg hover:bg-white transition-all hover:scale-105 active:scale-95 relative z-10"
+                                className="px-10 py-3 rounded-2xl font-bold text-blue-600 bg-white/80 backdrop-blur-3xl border border-white shadow-lg hover:shadow-[0_0_40px_rgba(255,255,255,0.8)] hover:bg-white transition-all hover:scale-110 active:scale-95 relative z-10"
                             >
                                 Sign In
                             </button>
@@ -199,16 +199,14 @@ export default function Auth() {
                             </p>
                             <button
                                 onClick={() => setIsLogin(false)}
-                                className="px-10 py-3 rounded-2xl font-bold text-blue-600 bg-white/80 backdrop-blur-md border border-white shadow-lg hover:bg-white transition-all hover:scale-105 active:scale-95 relative z-10"
+                                className="px-10 py-3 rounded-2xl font-bold text-blue-600 bg-white/80 backdrop-blur-3xl border border-white shadow-lg hover:shadow-[0_0_40px_rgba(255,255,255,0.8)] hover:bg-white transition-all hover:scale-110 active:scale-95 relative z-10"
                             >
                                 Sign Up
                             </button>
                         </div>
-
                     </div>
-                </div>
 
+                </div>
             </div>
-        </div>
-    )
+            )
 }
