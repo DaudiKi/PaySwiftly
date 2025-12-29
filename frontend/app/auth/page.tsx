@@ -18,19 +18,38 @@ export default function Auth() {
         vehicleType: 'boda', vehicleNumber: '', password: '', confirmPassword: ''
     })
 
+    const normalizePhone = (phone: string) => {
+        // Remove any non-digit characters
+        let cleaned = phone.replace(/\D/g, '')
+
+        // Handle 07... format (Kenya standard) -> 2547...
+        if (cleaned.startsWith('0') && cleaned.length === 10) {
+            cleaned = '254' + cleaned.substring(1)
+        }
+
+        // Handle 7... format (missing prefix) -> 2547...
+        if (cleaned.startsWith('7') && cleaned.length === 9) {
+            cleaned = '254' + cleaned
+        }
+
+        return cleaned
+    }
+
     const handleLoginSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setLoading(true)
         setError('')
         try {
+            const formattedPhone = normalizePhone(loginData.phone)
             const response = await fetchAPI<any>('/api/login', {
                 method: 'POST',
-                body: JSON.stringify(loginData)
+                body: JSON.stringify({ ...loginData, phone: formattedPhone })
             })
             localStorage.setItem('auth_token', response.token)
             router.push(`/dashboard/${response.driver_id}`)
         } catch (err: any) {
-            setError(err.message || 'Login failed')
+            console.error('Login error:', err)
+            setError(err.message || 'Login failed. Please check your phone and password.')
         } finally {
             setLoading(false)
         }
@@ -49,11 +68,14 @@ export default function Auth() {
                 setError('Password must be at least 8 characters')
                 return
             }
+
+            const formattedPhone = normalizePhone(registerData.phone)
+
             const response = await fetchAPI<any>('/api/register_driver', {
                 method: 'POST',
                 body: JSON.stringify({
                     name: `${registerData.firstName} ${registerData.lastName}`.trim(),
-                    phone: registerData.phone,
+                    phone: formattedPhone,
                     email: registerData.email,
                     vehicle_type: registerData.vehicleType,
                     vehicle_number: registerData.vehicleNumber,
@@ -62,6 +84,7 @@ export default function Auth() {
             })
             router.push(`/dashboard/${response.driver_id}`)
         } catch (err: any) {
+            console.error('Registration error:', err)
             setError(err.message || 'Registration failed')
         } finally {
             setLoading(false)
