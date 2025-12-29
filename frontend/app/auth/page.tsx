@@ -112,7 +112,7 @@ export default function Auth() {
 
                             <div className="relative z-10">
                                 {isLogin ? (
-                                    <div className="animate-fade-in">
+                                    <div key="login" className="animate-fade-in">
                                         <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                                             PaySwiftly
                                         </Link>
@@ -164,7 +164,7 @@ export default function Auth() {
                                         </form>
                                     </div>
                                 ) : (
-                                    <div className="animate-fade-in max-h-[500px] overflow-y-auto pr-2">
+                                    <div key="register" className="animate-fade-in max-h-[500px] overflow-y-auto pr-2">
                                         <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                                             PaySwiftly
                                         </Link>
