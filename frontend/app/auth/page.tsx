@@ -41,6 +41,13 @@ export default function Auth() {
         setError('')
         try {
             const formattedPhone = normalizePhone(loginData.phone)
+
+            if (formattedPhone.length < 9) {
+                setError('Please enter a valid phone number')
+                setLoading(false)
+                return
+            }
+
             const response = await fetchAPI<any>('/api/login', {
                 method: 'POST',
                 body: JSON.stringify({ ...loginData, phone: formattedPhone })
@@ -130,7 +137,7 @@ export default function Auth() {
 
                         <input
                             type="tel"
-                            placeholder="Phone Number"
+                            placeholder="Phone Number (e.g. 07...)"
                             value={loginData.phone}
                             onChange={(e) => setLoginData({ ...loginData, phone: e.target.value })}
                             className="bg-white/40 border border-white/60 w-full p-4 rounded-2xl mb-4 focus:ring-2 focus:ring-blue-500/50 outline-none backdrop-blur-sm transition-all placeholder:text-gray-500 shadow-[inset_0_2px_4px_rgba(0,0,0,0.05)] hover:bg-white/50"
