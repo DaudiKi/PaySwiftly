@@ -200,7 +200,7 @@ class IntaSendAPI:
         logger.info(f"Initiating payout: {reference} for KES {amount} to {phone_number}")
         
         try:
-            response = self._make_request("POST", "payouts/approve/", payload)
+            response = self._make_request("POST", "payouts/", payload)
             logger.info(f"Payout initiated successfully: {response.get('tracking_id')}")
             return response
         except Exception as e:
