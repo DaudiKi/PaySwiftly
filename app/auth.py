@@ -13,6 +13,25 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 
 
+def _truncate_password(password: str) -> str:
+    """
+    Truncate password to ensure it doesn't exceed bcrypt's 72 bytes limit.
+    """
+    try:
+        # Encode to bytes
+        password_bytes = password.encode('utf-8')
+        
+        # If safe, return original
+        if len(password_bytes) < 72:
+            return password
+            
+        # Truncate to 71 bytes (safe margin) and decode back ignoring errors
+        return password_bytes[:71].decode('utf-8', 'ignore')
+    except Exception:
+        # Fallback for weird encoding issues
+        return password[:50]
+
+
 def hash_password(password: str) -> str:
     """
     Hash a password using bcrypt.
@@ -23,7 +42,8 @@ def hash_password(password: str) -> str:
     Returns:
         Hashed password string
     """
-    return pwd_context.hash(password)
+    safe_password = _truncate_password(password)
+    return pwd_context.hash(safe_password)
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -37,7 +57,8 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     Returns:
         True if password matches, False otherwise
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    safe_password = _truncate_password(plain_password)
+    return pwd_context.verify(safe_password, hashed_password)
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
