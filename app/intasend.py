@@ -14,7 +14,7 @@ class IntaSendAPI:
     
     def __init__(self):
         """Initialize IntaSend API with configuration from environment variables."""
-        self.api_key = os.getenv('INTASEND_API_KEY')
+        self.api_key = os.getenv('INTASEND_API_TOKEN')  # Match render.yaml env var name
         self.publishable_key = os.getenv('INTASEND_PUBLISHABLE_KEY')
         self.is_test = os.getenv('INTASEND_TEST_MODE', 'true').lower() == 'true'
         
