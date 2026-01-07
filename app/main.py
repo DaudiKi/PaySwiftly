@@ -374,13 +374,13 @@ async def intasend_webhook(
         
         # Determine if this is a collection or payout webhook
         if webhook.api_ref:
-            # This is a collection webhook
+            # This is a collection webhook (has api_ref)
             await handle_collection_webhook(webhook, background_tasks)
         elif webhook.tracking_id:
-            # This is a payout webhook
+            # This is a payout webhook (has tracking_id but no api_ref)
             await handle_payout_webhook(webhook)
         else:
-            logger.warning(f"Unknown webhook type: {webhook_data}")
+            logger.warning(f"Unknown webhook type - no api_ref or tracking_id: {webhook_data}")
         
         return {"status": "success", "message": "Webhook processed"}
         
