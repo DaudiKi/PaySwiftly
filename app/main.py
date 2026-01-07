@@ -105,6 +105,22 @@ async def process_payout(transaction_id: str, driver_id: str, driver_phone: str,
         else:
             raise Exception("No tracking ID in payout response")
             
+    except ValueError as e:
+        # Minimum amount validation error
+        logger.warning(f"Payout below minimum threshold: {str(e)}")
+        try:
+            await supabase_manager.update_payout_status(
+                payout_id=payout_id,
+                status=PayoutStatus.FAILED,
+                failure_reason=f"Below minimum: {str(e)}"
+            )
+            await supabase_manager.update_transaction_payout(
+                transaction_id=transaction_id,
+                tracking_id='',
+                payout_status='pending_minimum'  # Special status for amounts below minimum
+            )
+        except:
+            pass
     except Exception as e:
         logger.error(f"Payout processing failed: {str(e)}")
         # Update payout status to failed

@@ -181,6 +181,13 @@ class IntaSendAPI:
         elif phone_number.startswith('0'):
             phone_number = f"254{phone_number[1:]}"
         
+        # IntaSend requires minimum KES 10 for M-PESA payouts
+        MIN_PAYOUT_AMOUNT = 10.0
+        if amount < MIN_PAYOUT_AMOUNT:
+            error_msg = f"Amount KES {amount} is below minimum payout of KES {MIN_PAYOUT_AMOUNT}"
+            logger.warning(f"Payout skipped: {error_msg}")
+            raise ValueError(error_msg)
+        
         # IntaSend send-money API requires /initiate/ endpoint and provider field
         payload = {
             "currency": "KES",
