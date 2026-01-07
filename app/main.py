@@ -364,7 +364,13 @@ async def intasend_webhook(
         webhook_data = await request.json()
         logger.info(f"Webhook received: {webhook_data.get('state')} - {webhook_data.get('api_ref')}")
         
-        webhook = IntaSendWebhook(**webhook_data)
+        # Try to parse webhook with better error handling
+        try:
+            webhook = IntaSendWebhook(**webhook_data)
+        except Exception as validation_error:
+            logger.error(f"Webhook validation failed: {str(validation_error)}")
+            logger.error(f"Raw webhook data: {webhook_data}")
+            raise
         
         # Determine if this is a collection or payout webhook
         if webhook.api_ref:
