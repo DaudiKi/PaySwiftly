@@ -393,7 +393,11 @@ async def intasend_webhook(
 async def handle_collection_webhook(webhook: IntaSendWebhook, background_tasks: BackgroundTasks):
     """Handle payment collection webhook."""
     transaction_id = webhook.api_ref
-    state = webhook.state.upper()
+    state = (webhook.state or webhook.status or "").upper()
+    
+    if not state:
+        logger.error("Webhook has no state or status field")
+        return
     
     # Get transaction
     transaction = await supabase_manager.get_transaction(transaction_id)

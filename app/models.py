@@ -142,7 +142,9 @@ class IntaSendWebhook(BaseModel):
     """IntaSend webhook payload model."""
     id: Optional[str] = None
     invoice_id: Optional[str] = None
-    state: str
+    state: Optional[str] = None  # Used in payment webhooks
+    status: Optional[str] = None  # Used in payout webhooks
+    status_code: Optional[str] = None  # Payout status code
     provider: Optional[str] = None
     charges: Optional[float] = None
     net_amount: Optional[float] = None
@@ -152,6 +154,9 @@ class IntaSendWebhook(BaseModel):
     api_ref: Optional[str] = None
     mpesa_reference: Optional[str] = None
     tracking_id: Optional[str] = None
+    file_id: Optional[str] = None  # Payout file ID
+    batch_reference: Optional[str] = None  # Payout batch reference
+    transactions: Optional[list] = None  # Payout transactions array
     meta: Optional[Dict[str, Any]] = None
     created_at: Optional[str] = None
     updated_at: Optional[str] = None
