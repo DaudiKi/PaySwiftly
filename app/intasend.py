@@ -181,24 +181,25 @@ class IntaSendAPI:
         elif phone_number.startswith('0'):
             phone_number = f"254{phone_number[1:]}"
         
-        # IntaSend send-money API uses a transactions array format
+        # IntaSend send-money API requires /initiate/ endpoint and provider field
         payload = {
             "currency": "KES",
+            "provider": "MPESA-B2C",  # Required field for M-PESA disbursements
             "transactions": [
                 {
                     "name": name if name else "Driver",
                     "account": phone_number,  # IntaSend uses 'account' not 'device'
-                    "amount": int(amount),
+                    "amount": str(amount),  # Amount must be string format
                     "narrative": f"Ride payment - Ref: {reference[:20]}"
                 }
-            ],
-            "requires_approval": "NO"  # Instant approval for automatic payouts
+            ]
         }
         
         logger.info(f"Initiating payout: {reference} for KES {amount} to {phone_number}")
         
         try:
-            response = self._make_request("POST", "send-money/", payload)
+            # Correct endpoint is /send-money/initiate/ (not just /send-money/)
+            response = self._make_request("POST", "send-money/initiate/", payload)
             logger.info(f"Payout initiated successfully: {response.get('tracking_id')}")
             return response
         except Exception as e:
