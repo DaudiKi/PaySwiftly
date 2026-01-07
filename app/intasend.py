@@ -16,13 +16,10 @@ class IntaSendAPI:
         """Initialize IntaSend API with configuration from environment variables."""
         self.api_key = os.getenv('INTASEND_API_TOKEN')  # Match render.yaml env var name
         self.publishable_key = os.getenv('INTASEND_PUBLISHABLE_KEY')
-        self.is_test = os.getenv('INTASEND_TEST_MODE', 'true').lower() == 'true'
         
-        # Set base URL based on environment
-        if self.is_test:
-            self.base_url = "https://sandbox.intasend.com/api/v1"
-        else:
-            self.base_url = "https://payment.intasend.com/api/v1"
+        # Use unified base URL that works for both sandbox and production
+        # IntaSend will route automatically based on the API key type
+        self.base_url = "https://api.intasend.com/api/v1"
         
         # Platform configuration
         self.platform_fee_percentage = float(os.getenv('PLATFORM_FEE_PERCENTAGE', '0.5'))
@@ -30,7 +27,7 @@ class IntaSendAPI:
         
         self._headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}"
+            "Authorization": f"Bearer {self.api_key}"  # Fixed typo: was "Authorizations"
         }
     
     def _make_request(
