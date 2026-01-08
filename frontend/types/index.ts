@@ -9,6 +9,11 @@ export interface Driver {
     qr_code_url: string | null;
     balance: number;
     total_earnings: number;
+    // Batch payout system fields
+    pending_balance: number;  // Earnings waiting for payout
+    paid_balance: number;     // Total already paid out
+    last_payout_date: string | null;  // When last batch payout occurred
+    payout_schedule: string;  // 'weekly', 'threshold', etc.
 }
 
 export interface PaymentInitiateResponse {

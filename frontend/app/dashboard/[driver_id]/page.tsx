@@ -94,59 +94,128 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
 
             <main className="max-w-5xl mx-auto px-6 py-8 space-y-8 relative z-10">
 
-                {/* Welcome & Earnings */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Liquid Balance Card */}
-                    <div className="relative group perspective-1000">
-                        <div className="absolute inset-0 bg-blue-600/30 rounded-[2.5rem] blur-xl transform group-hover:scale-105 transition-transform duration-500"></div>
-                        <div className="relative bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_rgba(37,99,235,0.3)] border border-white/20 text-white h-full flex flex-col justify-between group-hover:-translate-y-1 transition-transform duration-500">
-
-                            {/* Inner Gloss */}
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl transform translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-                            <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/30 rounded-full blur-3xl transform -translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
-
-                            <div className="relative z-10">
-                                <p className="text-blue-100 font-medium tracking-wide mb-1 opacity-80">Current Balance</p>
-                                <h2 className="text-5xl font-bold tracking-tight drop-shadow-md">
-                                    <span className="text-3xl opacity-70 font-medium mr-1">KES</span>
-                                    {driver.balance.toLocaleString()}
-                                </h2>
+                {/* Balances Overview - Updated for Batch Payouts */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Pending Balance Card */}
+                    <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-300"></div>
+                        <div className="relative bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-2xl border border-amber-200/50 shadow-lg hover:shadow-xl transition-all duration-300">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="p-2.5 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <span className="px-2 py-1 bg-amber-500/20 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wide">
+                                    Pending
+                                </span>
                             </div>
-
-                            <div className="relative z-10 mt-8 pt-6 border-t border-white/10 flex justify-between items-end">
-                                <div>
-                                    <p className="text-blue-200 text-xs uppercase tracking-wider mb-1">Total Earnings</p>
-                                    <p className="text-xl font-semibold">KES {driver.total_earnings.toLocaleString()}</p>
-                                </div>
-                                <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30 text-sm font-medium shadow-inner">
-                                    Active Now
-                                </div>
+                            <div>
+                                <p className="text-3xl font-black text-gray-800 mb-1">
+                                    KES {driver.pending_balance ? parseFloat(driver.pending_balance.toString()).toFixed(2) : '0.00'}
+                                </p>
+                                <p className="text-sm text-gray-600 font-medium mb-2">Awaiting Payout</p>
+                                {driver.pending_balance >= 100 ? (
+                                    <p className="text-xs text-green-600 font-semibold flex items-center gap-1">
+                                        <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                        Eligible for payout!
+                                    </p>
+                                ) : (
+                                    <p className="text-xs text-amber-600 font-semibold">
+                                        Need KES {(100 - (driver.pending_balance || 0)).toFixed(2)} more
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* QR Code Card */}
-                    <div className="bg-white/40 backdrop-blur-xl border border-white/60 p-8 rounded-[2.5rem] shadow-[0_8px_32px_0_rgba(31,38,135,0.1)] flex flex-col justify-center items-center text-center relative overflow-hidden group hover:bg-white/50 transition-colors duration-500">
-                        <div className="absolute inset-0 bg-gradient-to-b from-white/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                    {/* Paid Out Balance Card */}
+                    <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-300"></div>
+                        <div className="relative bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-200/50 shadow-lg hover:shadow-xl transition-all duration-300">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="p-2.5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <span className="px-2 py-1 bg-green-500/20 text-green-700 rounded-full text-xs font-bold uppercase tracking-wide">
+                                    Paid
+                                </span>
+                            </div>
+                            <div>
+                                <p className="text-3xl font-black text-gray-800 mb-1">
+                                    KES {driver.paid_balance ? parseFloat(driver.paid_balance.toString()).toFixed(2) : '0.00'}
+                                </p>
+                                <p className="text-sm text-gray-600 font-medium mb-2">Total Paid Out</p>
+                                {driver.last_payout_date ? (
+                                    <p className="text-xs text-green-600 font-semibold">
+                                        Last: {new Date(driver.last_payout_date).toLocaleDateString()}
+                                    </p>
+                                ) : (
+                                    <p className="text-xs text-gray-500 font-semibold">No payouts yet</p>
+                                )}
+                            </div>
+                        </div>
+                    </div>
 
-                        <div className="relative z-10">
-                            <h3 className="text-gray-800 font-bold text-lg mb-1">Receive Payments</h3>
-                            <p className="text-gray-500 text-sm mb-6">Show this QR code to passengers</p>
+                    {/* Total Earnings Card */}
+                    <div className="relative group">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition-all duration-300"></div>
+                        <div className="relative bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300">
+                            <div className="flex items-center justify-between mb-3">
+                                <div className="p-2.5 bg-white/10 backdrop-blur-sm rounded-xl ring-1 ring-white/20">
+                                    <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                </div>
+                                <span className="px-2 py-1 bg-white/10 backdrop-blur-sm rounded-full text-xs font-bold text-white uppercase tracking-wide ring-1 ring-white/20">
+                                    Lifetime
+                                </span>
+                            </div>
+                            <div>
+                                <p className="text-3xl font-black text-white mb-1 drop-shadow-lg">
+                                    KES {driver.total_earnings ? parseFloat(driver.total_earnings.toString()).toFixed(2) : '0.00'}
+                                </p>
+                                <p className="text-sm text-blue-100/90 font-medium mb-2">Total Earned</p>
+                                <p className="text-xs text-blue-200/70 font-semibold">All-time across all rides</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                            {driver.qr_code_url ? (
-                                <div className="bg-white p-4 rounded-3xl shadow-[0_10px_30px_rgba(0,0,0,0.1)] mb-4 transform group-hover:scale-105 transition-transform duration-500 border border-gray-100">
-                                    <img
-                                        src={driver.qr_code_url}
-                                        alt="Payment QR Code"
-                                        className="w-48 h-48 object-contain"
-                                    />
+                {/* Payout Information Banner */}
+                <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 p-6 rounded-2xl border border-blue-200/50 shadow-md">
+                    <div className="flex items-start gap-4">
+                        <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex-shrink-0">
+                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div className="flex-1">
+                            <h3 className="text-lg font-bold text-gray-800 mb-2">💰 About Payouts</h3>
+                            <p className="text-sm text-gray-600 leading-relaxed mb-3">
+                                Earnings accumulate in your <span className="font-semibold text-amber-600">Pending Balance</span>. Once you reach <span className="font-bold text-gray-800">KES 100</span>, you'll receive a payout via M-PESA.
+                            </p>
+                            {driver.pending_balance >= 100 ? (
+                                <div className="flex items-center gap-2 px-4 py-2.5 bg-green-100 border border-green-300 rounded-xl">
+                                    <svg className="w-5 h-5 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <p className="text-sm font-bold text-green-700">
+                                        You're eligible for payout! Payment will be processed in the next batch.
+                                    </p>
                                 </div>
                             ) : (
-                                <div className="w-56 h-56 bg-gray-100/50 rounded-3xl flex items-center justify-center text-gray-400 mb-6 border-2 border-dashed border-gray-300">
-                                    No QR Code
+                                <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-100 border border-amber-300 rounded-xl">
+                                    <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <p className="text-sm font-semibold text-amber-700">
+                                        Keep driving! You need KES {(100 - (driver.pending_balance || 0)).toFixed(2)} more to reach the minimum payout.
+                                    </p>
                                 </div>
                             )}
-
                             <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-50 text-blue-600 text-sm font-bold border border-blue-100 shadow-sm group-hover:shadow-[0_0_20px_rgba(37,99,235,0.2)] transition-shadow">
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                                 Scan to Pay
