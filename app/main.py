@@ -20,6 +20,7 @@ from .supabase_util import SupabaseManager
 from .intasend import IntaSendAPI
 from .qr_utils import generate_payment_qr
 from .auth import hash_password, verify_password, create_access_token
+from .batch_payout import trigger_batch_payout as process_batch_payout
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -171,6 +172,15 @@ async def get_driver(driver_id: str) -> Driver:
     if not driver:
         raise HTTPException(status_code=404, detail="Driver not found")
     return driver
+
+
+@app.post("/api/admin/trigger-batch-payout")
+async def trigger_batch_payout_endpoint():
+    """
+    Trigger batch payout for all drivers above minimum threshold.
+    Call this endpoint weekly or manually to process accumulated driver earnings.
+    """
+    return await process_batch_payout(intasend_api, supabase_manager)
 
 
 
