@@ -374,13 +374,59 @@ class SupabaseManager:
         
         return [Payout(**payout) for payout in result.data]
     
-    async def get_pending_payouts(self, limit: int = 100) -> List[Payout]:
+    async def get_pending_payouts(self, limit: int = 100):
         """Get all pending payouts."""
-        result = (self.supabase.table('payouts')
-                 .select('*')
-                 .eq('status', PayoutStatus.PENDING.value)
-                 .order('created_at', desc=False)
-                 .limit(limit)
-                 .execute())
+        result = self.supabase.table('payouts')\
+            .select('*')\
+            .eq('status', 'pending')\
+            .order('created_at', desc=True)\
+            .limit(limit)\
+            .execute()
         
-        return [Payout(**payout) for payout in result.data]
+        return result.data
+    
+    async def add_to_pending_balance(self, driver_id: str, amount: float):
+        """
+        Add amount to driver's pending balance (accumulate earnings).
+        Uses database function for atomic update.
+        """
+        try:
+            result = self.supabase.rpc('add_to_pending_balance', {
+                'driver_id_param': driver_id,
+                'amount_param': amount
+            }).execute()
+            return result
+        except Exception as e:
+            raise Exception(f"Failed to add to pending balance: {str(e)}")
+    
+    async def get_drivers_for_payout(self, minimum_threshold: float = 100.0):
+        """
+        Get all drivers eligible for batch payout (pending_balance >= threshold).
+        """
+        result = self.supabase.table('drivers')\
+            .select('id, name, phone, email, pending_balance, paid_balance, last_payout_date')\
+            .gte('pending_balance', minimum_threshold)\
+            .order('pending_balance', desc=True)\
+            .execute()
+        
+        return result.data
+    
+    async def process_batch_payout_completion(
+        self,
+        driver_id: str,
+        amount: float,
+        tracking_id: str
+    ):
+        """
+        Process successful batch payout - move pending to paid balance.
+        Uses database function for atomic update.
+        """
+        try:
+            result = self.supabase.rpc('process_batch_payout', {
+                'driver_id_param': driver_id,
+                'amount_param': amount,
+                'tracking_id_param': tracking_id
+            }).execute()
+            return result
+        except Exception as e:
+            raise Exception(f"Failed to process batch payout: {str(e)}")

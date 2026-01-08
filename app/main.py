@@ -56,87 +56,10 @@ supabase_manager = SupabaseManager()
 
 # === Background Tasks ===
 
-async def process_payout(transaction_id: str, driver_id: str, driver_phone: str, amount: float, driver_name: str):
-    """
-    Background task to process driver payout after successful collection.
-    This runs asynchronously after payment collection is confirmed.
-    """
-    try:
-        logger.info(f"Processing payout for transaction {transaction_id}")
-        
-        # Create payout record
-        payout = Payout(
-            transaction_id=transaction_id,
-            driver_id=driver_id,
-            amount=amount,
-            status=PayoutStatus.PENDING
-        )
-        payout_id = await supabase_manager.create_payout(payout)
-        logger.info(f"Payout record created: {payout_id}")
-        
-        # Initiate payout via IntaSend
-        payout_response = await intasend_api.initiate_payout(
-            phone_number=driver_phone,
-            amount=amount,
-            reference=transaction_id,
-            name=driver_name
-        )
-        
-        tracking_id = payout_response.get('tracking_id')
-        
-        if tracking_id:
-            # Update payout record with tracking ID
-            await supabase_manager.update_payout_status(
-                payout_id=payout_id,
-                status=PayoutStatus.PROCESSING,
-                tracking_id=tracking_id,
-                intasend_response=payout_response
-            )
-            
-            # Update transaction with payout details
-            await supabase_manager.update_transaction_payout(
-                transaction_id=transaction_id,
-                tracking_id=tracking_id,
-                payout_status='processing',
-                payout_response=payout_response
-            )
-            
-            logger.info(f"Payout initiated successfully. Tracking ID: {tracking_id}")
-        else:
-            raise Exception("No tracking ID in payout response")
-            
-    except ValueError as e:
-        # Minimum amount validation error
-        logger.warning(f"Payout below minimum threshold: {str(e)}")
-        try:
-            await supabase_manager.update_payout_status(
-                payout_id=payout_id,
-                status=PayoutStatus.FAILED,
-                failure_reason=f"Below minimum: {str(e)}"
-            )
-            await supabase_manager.update_transaction_payout(
-                transaction_id=transaction_id,
-                tracking_id='',
-                payout_status='pending_minimum'  # Special status for amounts below minimum
-            )
-        except:
-            pass
-    except Exception as e:
-        logger.error(f"Payout processing failed: {str(e)}")
-        # Update payout status to failed
-        try:
-            await supabase_manager.update_payout_status(
-                payout_id=payout_id,
-                status=PayoutStatus.FAILED,
-                failure_reason=str(e)
-            )
-            await supabase_manager.update_transaction_payout(
-                transaction_id=transaction_id,
-                tracking_id='',
-                payout_status='failed'
-            )
-        except:
-            pass
+# process_payout function removed - replaced with batch payout system
+# Payments now accumulate in driver.pending_balance
+# Batch payouts triggered via /api/admin/trigger-batch-payout endpoint
+
 
 
 # === API Routes ===
@@ -425,20 +348,21 @@ async def handle_collection_webhook(webhook: IntaSendWebhook, background_tasks: 
         )
         await supabase_manager.create_platform_fee(platform_fee)
         
-        # Get driver details for payout
-        driver = await supabase_manager.get_driver(transaction.driver_id)
-        
-        # Schedule automatic payout in background
-        background_tasks.add_task(
-            process_payout,
-            transaction_id=transaction_id,
+        # ADD TO DRIVER'S PENDING BALANCE (instead of immediate payout)
+        await supabase_manager.add_to_pending_balance(
             driver_id=transaction.driver_id,
-            driver_phone=driver.phone,
-            amount=transaction.driver_amount,
-            driver_name=driver.name
+            amount=transaction.driver_amount
         )
         
-        logger.info(f"Payment collected. Payout scheduled for {transaction.driver_amount} KES")
+        # Update transaction to show balance accumulated
+        await supabase_manager.update_transaction_payout(
+            transaction_id=transaction_id,
+            tracking_id='',  # No tracking ID yet - will get one on batch payout
+            payout_status='pending_batch',  # New status for batch payout system
+            payout_response={'note': 'Added to pending balance for weekly payout'}
+        )
+        
+        logger.info(f"Payment collected. Added {transaction.driver_amount} KES to driver pending balance")
         
     elif state == "FAILED":
         # Payment failed

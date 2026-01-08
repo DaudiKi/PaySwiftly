@@ -21,9 +21,10 @@ class IntaSendAPI:
         # IntaSend will route automatically based on the API key type
         self.base_url = "https://api.intasend.com/api/v1"
         
-        # Platform configuration
-        self.platform_fee_percentage = float(os.getenv('PLATFORM_FEE_PERCENTAGE', '0.5'))
+        # Platform configuration - UPDATED FOR PROFITABILITY
+        self.platform_fee_percentage = float(os.getenv('PLATFORM_FEE_PERCENTAGE', '3.0'))  # Changed from 0.5% to 3%
         self.platform_fee_fixed = float(os.getenv('PLATFORM_FEE_FIXED', '0'))
+        self.minimum_payout = float(os.getenv('MINIMUM_PAYOUT_THRESHOLD', '100'))  # NEW: Minimum KES 100
         
         self._headers = {
             "Content-Type": "application/json",
@@ -154,7 +155,7 @@ class IntaSendAPI:
             logger.error(f"Status check failed: {str(e)}")
             raise
     
-    async def initiate_payout(
+    async def initiate_batch_payout(
         self,
         phone_number: str,
         amount: float,
@@ -163,7 +164,8 @@ class IntaSendAPI:
         account: Optional[str] = None
     ) -> Dict[str, Any]:
         """
-        Initiate payout/disbursement to driver's M-Pesa.
+        Initiate batch payout/disbursement to driver's M-Pesa.
+        This is used for weekly batch payouts when balance >= minimum threshold.
         
         Args:
             phone_number: Driver's M-Pesa number (format: 254XXXXXXXXX)
@@ -181,11 +183,10 @@ class IntaSendAPI:
         elif phone_number.startswith('0'):
             phone_number = f"254{phone_number[1:]}"
         
-        # IntaSend requires minimum KES 10 for M-PESA payouts
-        MIN_PAYOUT_AMOUNT = 10.0
-        if amount < MIN_PAYOUT_AMOUNT:
-            error_msg = f"Amount KES {amount} is below minimum payout of KES {MIN_PAYOUT_AMOUNT}"
-            logger.warning(f"Payout skipped: {error_msg}")
+        # Check minimum payout threshold
+        if amount < self.minimum_payout:
+            error_msg = f"Amount KES {amount} is below minimum payout of KES {self.minimum_payout}"
+            logger.warning(f"Batch payout skipped: {error_msg}")
             raise ValueError(error_msg)
         
         # IntaSend send-money API requires /initiate/ endpoint and provider field
@@ -197,20 +198,49 @@ class IntaSendAPI:
                     "name": name if name else "Driver",
                     "account": phone_number,  # IntaSend uses 'account' not 'device'
                     "amount": str(amount),  # Amount must be string format
-                    "narrative": f"Ride payment - Ref: {reference[:20]}"
+                    "narrative": f"Weekly payout - Ref: {reference[:20]}"
                 }
             ]
         }
         
-        logger.info(f"Initiating payout: {reference} for KES {amount} to {phone_number}")
+        logger.info(f"Initiating batch payout: {reference} for KES {amount} to {phone_number}")
         
         try:
             # Correct endpoint is /send-money/initiate/ (not just /send-money/)
             response = self._make_request("POST", "send-money/initiate/", payload)
-            logger.info(f"Payout initiated successfully: {response.get('tracking_id')}")
+            
+            file_id = response.get('file_id')
+            if file_id:
+                # Auto-approve the payout
+                logger.info(f"Auto-approving payout file: {file_id}")
+                approval_response = await self.approve_payout(file_id)
+                logger.info(f"Batch payout auto-approved: {file_id}")
+                return approval_response
+            
+            logger.info(f"Batch payout initiated successfully: {response.get('tracking_id')}")
             return response
         except Exception as e:
-            logger.error(f"Payout initiation failed: {str(e)}")
+            logger.error(f"Batch payout initiation failed: {str(e)}")
+            raise
+    
+    async def approve_payout(self, file_id: str) -> Dict[str, Any]:
+        """
+        Approve a pending payout file (for automatic approval).
+        
+        Args:
+            file_id: The file_id returned from initiate_batch_payout
+            
+        Returns:
+            Dict containing the approval response
+        """
+        payload = {"file_id": file_id}
+        
+        try:
+            response = self._make_request("POST", "send-money/approve/", payload)
+            logger.info(f"Payout approved successfully: {file_id}")
+            return response
+        except Exception as e:
+            logger.error(f"Payout approval failed: {str(e)}")
             raise
     
     async def check_payout_status(self, tracking_id: str) -> Dict[str, Any]:
