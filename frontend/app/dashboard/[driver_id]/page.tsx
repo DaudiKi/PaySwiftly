@@ -15,6 +15,7 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
     const [transactions, setTransactions] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState('')
+    const [showHistory, setShowHistory] = useState(false)
 
     useEffect(() => {
         const loadData = async () => {
@@ -291,9 +292,12 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                         <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-transform">👁️</div>
                         <span className="text-base font-bold text-gray-700">Public Profile</span>
                     </Link>
-                    <button className="group bg-white/40 backdrop-blur-md border border-white/60 p-6 rounded-2xl text-center hover:bg-white/70 transition-all hover:scale-[1.02] hover:shadow-lg flex flex-col items-center justify-center gap-3 cursor-not-allowed opacity-60">
-                        <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl shadow-md">💸</div>
-                        <span className="text-base font-bold text-gray-700">Withdraw <span className="text-xs font-normal text-gray-400 block">(Coming Soon)</span></span>
+                    <button
+                        onClick={() => setShowHistory(true)}
+                        className="group bg-white/40 backdrop-blur-md border border-white/60 p-6 rounded-2xl text-center hover:bg-white/70 transition-all hover:scale-[1.02] hover:shadow-lg flex flex-col items-center justify-center gap-3"
+                    >
+                        <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-transform">📋</div>
+                        <span className="text-base font-bold text-gray-700">Transaction History</span>
                     </button>
                 </div>
 
@@ -339,6 +343,127 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                 </div>
 
             </main>
+
+            {/* Transaction History Modal */}
+            {showHistory && (
+                <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowHistory(false)}>
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full max-h-[80vh] overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        {/* Modal Header */}
+                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-bold">Transaction History</h2>
+                                    <p className="text-blue-100 text-sm mt-1">All your payment transactions</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowHistory(false)}
+                                    className="w-10 h-10 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div className="p-6 overflow-y-auto max-h-[60vh]">
+                            {transactions.length === 0 ? (
+                                <div className="text-center py-12">
+                                    <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <svg className="w-10 h-10 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </div>
+                                    <p className="text-gray-500 font-medium">No transactions yet</p>
+                                    <p className="text-gray-400 text-sm mt-1">Your transaction history will appear here</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {transactions.map((transaction, index) => {
+                                        const date = new Date(transaction.created_at)
+                                        const isCompleted = transaction.collection_status === 'completed'
+                                        const isPending = transaction.collection_status === 'pending'
+                                        const isFailed = transaction.collection_status === 'failed'
+
+                                        return (
+                                            <div
+                                                key={transaction.id || index}
+                                                className="bg-gradient-to-r from-gray-50 to-blue-50/30 p-4 rounded-2xl border border-gray-200/50 hover:shadow-md transition-shadow"
+                                            >
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-3 mb-2">
+                                                            <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${isCompleted ? 'bg-green-100 text-green-600' :
+                                                                    isPending ? 'bg-blue-100 text-blue-600' :
+                                                                        'bg-red-100 text-red-600'
+                                                                }`}>
+                                                                {isCompleted ? '✓' : isPending ? '⏳' : '✗'}
+                                                            </div>
+                                                            <div>
+                                                                <p className="font-bold text-gray-800">
+                                                                    KES {transaction.amount ? parseFloat(transaction.amount.toString()).toFixed(2) : '0.00'}
+                                                                </p>
+                                                                <p className="text-xs text-gray-500">
+                                                                    {date.toLocaleDateString('en-US', {
+                                                                        year: 'numeric',
+                                                                        month: 'short',
+                                                                        day: 'numeric',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit'
+                                                                    })}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-2 ml-13">
+                                                            <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isCompleted ? 'bg-green-100 text-green-700' :
+                                                                    isPending ? 'bg-blue-100 text-blue-700' :
+                                                                        'bg-red-100 text-red-700'
+                                                                }`}>
+                                                                {transaction.collection_status?.toUpperCase() || 'UNKNOWN'}
+                                                            </span>
+                                                            {transaction.driver_amount && (
+                                                                <span className="text-xs text-gray-600">
+                                                                    Your Share: <span className="font-semibold text-indigo-600">KES {parseFloat(transaction.driver_amount.toString()).toFixed(2)}</span>
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        {transaction.platform_fee && (
+                                                            <p className="text-xs text-gray-500">
+                                                                Fee: KES {parseFloat(transaction.platform_fee.toString()).toFixed(2)}
+                                                            </p>
+                                                        )}
+                                                        {transaction.id && (
+                                                            <p className="text-xs text-gray-400 mt-1 font-mono">
+                                                                #{transaction.id.slice(0, 8)}
+                                                            </p>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div className="bg-gray-50 p-4 border-t border-gray-200">
+                            <div className="flex items-center justify-between text-sm">
+                                <span className="text-gray-600">Total Transactions: <span className="font-bold text-gray-800">{transactions.length}</span></span>
+                                <button
+                                    onClick={() => setShowHistory(false)}
+                                    className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-semibold hover:shadow-lg transition-shadow"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
