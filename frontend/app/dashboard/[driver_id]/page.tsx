@@ -94,19 +94,19 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
 
             <main className="max-w-5xl mx-auto px-6 py-8 space-y-8 relative z-10">
 
-                {/* Balances Overview - Updated for Batch Payouts */}
+                {/* Balances Overview - Theme Consistent */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Pending Balance Card */}
+                    {/* Pending Balance Card - Blue Theme */}
                     <div className="relative group">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-orange-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-300"></div>
-                        <div className="relative bg-gradient-to-br from-amber-50 to-orange-50 p-6 rounded-2xl border border-amber-200/50 shadow-lg hover:shadow-xl transition-all duration-300">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-blue-400 to-indigo-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-300"></div>
+                        <div className="relative bg-gradient-to-br from-blue-50 to-indigo-50 p-6 rounded-2xl border border-blue-200/50 shadow-lg hover:shadow-xl transition-all duration-300">
                             <div className="flex items-center justify-between mb-3">
-                                <div className="p-2.5 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl">
+                                <div className="p-2.5 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl">
                                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
-                                <span className="px-2 py-1 bg-amber-500/20 text-amber-700 rounded-full text-xs font-bold uppercase tracking-wide">
+                                <span className="px-2 py-1 bg-blue-500/20 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wide">
                                     Pending
                                 </span>
                             </div>
@@ -121,7 +121,7 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                                         Eligible for payout!
                                     </p>
                                 ) : (
-                                    <p className="text-xs text-amber-600 font-semibold">
+                                    <p className="text-xs text-blue-600 font-semibold">
                                         Need KES {(100 - (driver.pending_balance || 0)).toFixed(2)} more
                                     </p>
                                 )}
@@ -129,17 +129,17 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                         </div>
                     </div>
 
-                    {/* Paid Out Balance Card */}
+                    {/* Paid Out Balance Card - Indigo Theme */}
                     <div className="relative group">
-                        <div className="absolute -inset-1 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-300"></div>
-                        <div className="relative bg-gradient-to-br from-green-50 to-emerald-50 p-6 rounded-2xl border border-green-200/50 shadow-lg hover:shadow-xl transition-all duration-300">
+                        <div className="absolute -inset-1 bg-gradient-to-r from-indigo-400 to-purple-400 rounded-2xl blur opacity-20 group-hover:opacity-40 transition-all duration-300"></div>
+                        <div className="relative bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-2xl border border-indigo-200/50 shadow-lg hover:shadow-xl transition-all duration-300">
                             <div className="flex items-center justify-between mb-3">
-                                <div className="p-2.5 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl">
+                                <div className="p-2.5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl">
                                     <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
                                 </div>
-                                <span className="px-2 py-1 bg-green-500/20 text-green-700 rounded-full text-xs font-bold uppercase tracking-wide">
+                                <span className="px-2 py-1 bg-indigo-500/20 text-indigo-700 rounded-full text-xs font-bold uppercase tracking-wide">
                                     Paid
                                 </span>
                             </div>
@@ -149,7 +149,7 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                                 </p>
                                 <p className="text-sm text-gray-600 font-medium mb-2">Total Paid Out</p>
                                 {driver.last_payout_date ? (
-                                    <p className="text-xs text-green-600 font-semibold">
+                                    <p className="text-xs text-indigo-600 font-semibold">
                                         Last: {new Date(driver.last_payout_date).toLocaleDateString()}
                                     </p>
                                 ) : (
@@ -159,7 +159,7 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                         </div>
                     </div>
 
-                    {/* Total Earnings Card */}
+                    {/* Total Earnings Card - Blue Gradient */}
                     <div className="relative group">
                         <div className="absolute -inset-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 rounded-2xl blur opacity-25 group-hover:opacity-50 transition-all duration-300"></div>
                         <div className="relative bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-2xl shadow-xl hover:shadow-2xl transition-all duration-300">
@@ -178,13 +178,13 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                                     KES {driver.total_earnings ? parseFloat(driver.total_earnings.toString()).toFixed(2) : '0.00'}
                                 </p>
                                 <p className="text-sm text-blue-100/90 font-medium mb-2">Total Earned</p>
-                                <p className="text-xs text-blue-200/70 font-semibold">All-time across all rides</p>
+                                <p className="text-xs text-blue-200/70 font-semibold">All-time earnings</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Payout Information Banner */}
+                {/* Payout Information Banner - Blue Theme */}
                 <div className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 p-6 rounded-2xl border border-blue-200/50 shadow-md">
                     <div className="flex items-start gap-4">
                         <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex-shrink-0">
@@ -195,7 +195,7 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                         <div className="flex-1">
                             <h3 className="text-lg font-bold text-gray-800 mb-2">💰 About Payouts</h3>
                             <p className="text-sm text-gray-600 leading-relaxed mb-3">
-                                Earnings accumulate in your <span className="font-semibold text-amber-600">Pending Balance</span>. Once you reach <span className="font-bold text-gray-800">KES 100</span>, you'll receive a payout via M-PESA.
+                                Earnings accumulate in your <span className="font-semibold text-blue-600">Pending Balance</span>. Once you reach <span className="font-bold text-gray-800">KES 100</span>, you'll receive a payout via M-PESA.
                             </p>
                             {driver.pending_balance >= 100 ? (
                                 <div className="flex items-center gap-2 px-4 py-2.5 bg-green-100 border border-green-300 rounded-xl">
@@ -207,31 +207,92 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                                     </p>
                                 </div>
                             ) : (
-                                <div className="flex items-center gap-2 px-4 py-2.5 bg-amber-100 border border-amber-300 rounded-xl">
-                                    <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="flex items-center gap-2 px-4 py-2.5 bg-blue-100 border border-blue-300 rounded-xl">
+                                    <svg className="w-5 h-5 text-blue-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                                     </svg>
-                                    <p className="text-sm font-semibold text-amber-700">
+                                    <p className="text-sm font-semibold text-blue-700">
                                         Keep driving! You need KES {(100 - (driver.pending_balance || 0)).toFixed(2)} more to reach the minimum payout.
                                     </p>
                                 </div>
                             )}
-                            <span className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-blue-50 text-blue-600 text-sm font-bold border border-blue-100 shadow-sm group-hover:shadow-[0_0_20px_rgba(37,99,235,0.2)] transition-shadow">
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
-                                Scan to Pay
-                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                {/* QR Code - Prominently Displayed */}
+                <div className="bg-white/60 backdrop-blur-xl border border-white/60 p-8 rounded-2xl shadow-lg">
+                    <div className="text-center">
+                        <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+                            Your Payment QR Code
+                        </h3>
+                        <p className="text-gray-600 mb-6">Show this to passengers for instant payments</p>
+
+                        {driver.qr_code_url ? (
+                            <div className="flex justify-center mb-4">
+                                <div className="bg-white p-6 rounded-3xl shadow-xl border border-gray-100">
+                                    <img
+                                        src={driver.qr_code_url}
+                                        alt="Payment QR Code"
+                                        className="w-64 h-64 object-contain"
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex justify-center mb-4">
+                                <div className="w-64 h-64 bg-gray-100/50 rounded-3xl flex items-center justify-center text-gray-400 border-2 border-dashed border-gray-300">
+                                    No QR Code Available
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-blue-50 to-indigo-50 text-blue-600 text-sm font-bold border border-blue-200 shadow-sm">
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                            </svg>
+                            Scan to Pay
+                        </div>
+                    </div>
+                </div>
+
+                {/* Welcome Section */}
+                <div className="bg-white/60 backdrop-blur-xl p-8 rounded-2xl border border-white/60 shadow-lg">
+                    <h2 className="text-3xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-3">
+                        Welcome Back, {driver.name.split(' ')[0]}!
+                    </h2>
+                    <p className="text-gray-600 mb-6 leading-relaxed">
+                        Track your earnings and payment history in real-time.
+                    </p>
+                    <div className="space-y-4">
+                        <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md">
+                                📱
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-gray-700">{driver.phone}</p>
+                                <p className="text-xs text-gray-500">Registered Phone</p>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
+                            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md">
+                                🚗
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-gray-700">{driver.vehicle_number || 'Not Set'}</p>
+                                <p className="text-xs text-gray-500">Vehicle Number</p>
+                            </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Quick Actions */}
                 <div className="grid grid-cols-2 gap-6">
-                    <Link href={`/pay/${driverId}`} className="group bg-white/40 backdrop-blur-md border border-white/60 p-6 rounded-[2rem] text-center hover:bg-white/70 transition-all hover:scale-[1.02] hover:shadow-[0_10px_40px_rgba(37,99,235,0.15)] flex flex-col items-center justify-center gap-3">
-                        <div className="w-14 h-14 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner group-hover:rotate-6 transition-transform">👁️</div>
+                    <Link href={`/pay/${driverId}`} className="group bg-white/40 backdrop-blur-md border border-white/60 p-6 rounded-2xl text-center hover:bg-white/70 transition-all hover:scale-[1.02] hover:shadow-lg flex flex-col items-center justify-center gap-3">
+                        <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-transform">👁️</div>
                         <span className="text-base font-bold text-gray-700">Public Profile</span>
                     </Link>
-                    <button className="group bg-white/40 backdrop-blur-md border border-white/60 p-6 rounded-[2rem] text-center hover:bg-white/70 transition-all hover:scale-[1.02] hover:shadow-[0_10px_40px_rgba(37,99,235,0.15)] flex flex-col items-center justify-center gap-3 cursor-not-allowed opacity-70 grayscale hover:grayscale-0">
-                        <div className="w-14 h-14 bg-green-100 text-green-600 rounded-2xl flex items-center justify-center text-2xl shadow-inner">💸</div>
+                    <button className="group bg-white/40 backdrop-blur-md border border-white/60 p-6 rounded-2xl text-center hover:bg-white/70 transition-all hover:scale-[1.02] hover:shadow-lg flex flex-col items-center justify-center gap-3 cursor-not-allowed opacity-60">
+                        <div className="w-14 h-14 bg-gradient-to-br from-indigo-100 to-purple-100 text-indigo-600 rounded-2xl flex items-center justify-center text-2xl shadow-md">💸</div>
                         <span className="text-base font-bold text-gray-700">Withdraw <span className="text-xs font-normal text-gray-400 block">(Coming Soon)</span></span>
                     </button>
                 </div>
