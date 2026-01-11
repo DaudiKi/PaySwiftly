@@ -35,6 +35,20 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
         loadData()
     }, [driverId])
 
+    // Auto-refresh driver balances every 30 seconds
+    useEffect(() => {
+        const refreshInterval = setInterval(async () => {
+            try {
+                const freshDriver = await api.getDriver(driverId)
+                setDriver(freshDriver)
+            } catch (err) {
+                console.error('Failed to refresh driver data:', err)
+            }
+        }, 30000) // 30 seconds
+
+        return () => clearInterval(refreshInterval)
+    }, [driverId])
+
     const handleLogout = () => {
         localStorage.removeItem('auth_token')
         router.push('/')
@@ -395,8 +409,8 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                                                     <div className="flex-1">
                                                         <div className="flex items-center gap-3 mb-2">
                                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-lg ${isCompleted ? 'bg-green-100 text-green-600' :
-                                                                    isPending ? 'bg-blue-100 text-blue-600' :
-                                                                        'bg-red-100 text-red-600'
+                                                                isPending ? 'bg-blue-100 text-blue-600' :
+                                                                    'bg-red-100 text-red-600'
                                                                 }`}>
                                                                 {isCompleted ? '✓' : isPending ? '⏳' : '✗'}
                                                             </div>
@@ -417,8 +431,8 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                                                         </div>
                                                         <div className="flex items-center gap-2 ml-13">
                                                             <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${isCompleted ? 'bg-green-100 text-green-700' :
-                                                                    isPending ? 'bg-blue-100 text-blue-700' :
-                                                                        'bg-red-100 text-red-700'
+                                                                isPending ? 'bg-blue-100 text-blue-700' :
+                                                                    'bg-red-100 text-red-700'
                                                                 }`}>
                                                                 {transaction.collection_status?.toUpperCase() || 'UNKNOWN'}
                                                             </span>
