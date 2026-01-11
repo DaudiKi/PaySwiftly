@@ -208,7 +208,12 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                             </svg>
                         </div>
                         <div className="flex-1">
-                            <h3 className="text-lg font-bold text-gray-800 mb-2">💰 About Payouts</h3>
+                            <h3 className="text-lg font-bold text-gray-800 mb-2 flex items-center gap-2">
+                                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                About Payouts
+                            </h3>
                             <p className="text-sm text-gray-600 leading-relaxed mb-3">
                                 Earnings accumulate in your <span className="font-semibold text-blue-600">Pending Balance</span>. Once you reach <span className="font-bold text-gray-800">KES 100</span>, you'll receive a payout via M-PESA.
                             </p>
@@ -281,7 +286,9 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                     <div className="space-y-4">
                         <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
                             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md">
-                                📱
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                                </svg>
                             </div>
                             <div>
                                 <p className="text-sm font-bold text-gray-700">{driver.phone}</p>
@@ -290,7 +297,9 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                         </div>
                         <div className="flex items-center gap-3 p-3 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl">
                             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-bold shadow-md">
-                                🚗
+                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                                </svg>
                             </div>
                             <div>
                                 <p className="text-sm font-bold text-gray-700">{driver.vehicle_number || 'Not Set'}</p>
@@ -303,7 +312,12 @@ export default function DriverDashboard({ params }: { params: Promise<{ driver_i
                 {/* Quick Actions */}
                 <div className="grid grid-cols-2 gap-6">
                     <Link href={`/pay/${driverId}`} className="group bg-white/40 backdrop-blur-md border border-white/60 p-6 rounded-2xl text-center hover:bg-white/70 transition-all hover:scale-[1.02] hover:shadow-lg flex flex-col items-center justify-center gap-3">
-                        <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 rounded-2xl flex items-center justify-center text-2xl shadow-md group-hover:scale-110 transition-transform">👁️</div>
+                        <div className="w-14 h-14 bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 rounded-2xl flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                        </div>
                         <span className="text-base font-bold text-gray-700">Public Profile</span>
                     </Link>
                     <button
